@@ -38,8 +38,10 @@ class Window(QMainWindow):
 
 class Widget(QWidget):
 
-    def __init__(self):
-        self.button()
+    def __init__(self, parent=Window):
+        """Initializer.
+        """
+        super().__init__(parent)
 
 
     def button(self):
