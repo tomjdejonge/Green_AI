@@ -1,6 +1,5 @@
 import sys
-
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QStatusBar, QToolBar, QWidget, QHBoxLayout, QPushButton
+from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QStatusBar, QToolBar, QWidget, QHBoxLayout, QPushButton, QVBoxLayout
 
 class Window(QMainWindow):
     """Main Window."""
@@ -14,10 +13,14 @@ class Window(QMainWindow):
         self.createStatusBar()
         self.setGeometry(500,200,350,400)
 
-
     def central_widget(self):
-        #self.central_widget = self.setCentralWidget(QLabel("Central Widget"))
-        self.central_widget = Widget.addbutton(self)
+
+        x = QHBoxLayout()  # new
+        b1 = QPushButton("Test1")  # new
+        b2 = QPushButton("Test2")  # new
+        x.addWidget(b1)  # new
+
+        self.setCentralWidget(Widget.button(self) )
 
     def createMenu(self):
         self.menu = self.menuBar().addMenu("&Menu")
@@ -34,19 +37,17 @@ class Window(QMainWindow):
         self.setStatusBar(status)
 
 class Widget(QWidget):
+
     def __init__(self):
-        super().__init__(parent)
-
-    def addbutton(self):
-        layout = QHBoxLayout()
-        layout.addWidget(QPushButton("Left-Most"))
-        layout.addWidget(QPushButton("Center"), 1)
-        layout.addWidget(QPushButton("Right-Most"), 2)
+        self.button()
 
 
+    def button(self):
+        QPushButton('klik')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = Window()
     win.show()
     sys.exit(app.exec_())
+
