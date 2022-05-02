@@ -1,23 +1,40 @@
-import matplotlib.image as image
-import numpy as np
-import matplotlib.pyplot as plt
-import time
 from PIL import Image
-from scipy.linalg import svd
+from numpy import asarray
+import numpy as np
 
-img = image.imread('dog.jpg')
-print('The shape of the image is:', img.shape)
+# load the image and convert image to numpy array
+image = Image.open('dog.jpg')
+img = asarray(image)
+print(f'The shape of the original image is: {img.shape}')
 
-# Reshape image
-reshaped_img = np.reshape(img, (512, 1536))
-print('The shape of the reshaped image is:', reshaped_img.shape)
+# Reshape
+img = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+print('The shape of the initially reshaped image is:', img.shape)
 
-# Perform SVD
-# u, s, vh = np.linalg.svd(reshaped_img, full_matrices=True)
-# print(f'The shape of u is: {u.shape}')
-# print(f'The shape of s is: {s.shape}')
-# print(f'The shape of vh is: {vh.shape}')
+# SVD
+no_dim = len(img.shape)
 
+u, s, vh = np.linalg.svd(img, full_matrices=False)
 
-# reconstruction = u @ s @ vh
-# np.array_equal(reconstruction, reshaped_img)
+# count = 0
+# while count < no_dim:
+#     u, s, vh = np.linalg.svd(img, full_matrices=False)
+#     U.append(u)
+#     S.append(s)
+#     VH.append(vh)
+#     img = s
+#     no_dim -= 1
+#     count += 1
+#     print(f'Dim of img after SVD run no {count}: {img.shape}')
+#
+# print(f'The shapes of: u = {U.shape}, s = {S.shape}, vh = {VH.shape}')
+
+# Reconstruction
+recon = np.matmul(u * s[..., None, :], vh)
+
+# Reshape
+recon_reshaped = np.reshape(recon, (512, 512, 3))
+print('The shape of the final reshaped image is:', recon_reshaped.shape)
+print(type(recon_reshaped))
+recon_reshaped_image = Image.fromarray((recon_reshaped * 255).astype(np.uint8))
+recon_reshaped_image.show()
