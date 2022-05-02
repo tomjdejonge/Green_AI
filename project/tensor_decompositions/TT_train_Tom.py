@@ -17,6 +17,10 @@ no_dim = len(img.shape)
 u, s, vh = np.linalg.svd(img, full_matrices=False)
 
 # count = 0
+# U = []
+# S = []
+# VH = []
+#
 # while count < no_dim:
 #     u, s, vh = np.linalg.svd(img, full_matrices=False)
 #     U.append(u)
@@ -27,7 +31,7 @@ u, s, vh = np.linalg.svd(img, full_matrices=False)
 #     count += 1
 #     print(f'Dim of img after SVD run no {count}: {img.shape}')
 #
-# print(f'The shapes of: u = {U.shape}, s = {S.shape}, vh = {VH.shape}')
+# print(f'The shapes of: U = {U.shape}, S = {S.shape}, VH = {VH.shape}')
 
 # Reconstruction
 recon = np.matmul(u * s[..., None, :], vh)

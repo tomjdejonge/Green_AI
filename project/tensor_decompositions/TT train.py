@@ -1,7 +1,5 @@
 import matplotlib.image as image
 import numpy as np
-from skimage import color
-from skimage import io
 from PIL import Image
 import matplotlib.pyplot as plt
 
