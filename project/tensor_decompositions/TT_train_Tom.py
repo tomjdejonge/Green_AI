@@ -119,5 +119,5 @@ def tt_reconstruction_2(cores, row_dims, col_dims, ranks, order):
 reconstructed_dog = tt_reconstruction_2(cores, row_dims, col_dims, ranks, order)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
 reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
-new_image = Image.fromarray((reshaped_dog * 255).astype(np.uint8))
+new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
 new_image.show()
