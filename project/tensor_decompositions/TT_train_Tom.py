@@ -1,44 +1,46 @@
 from PIL import Image
-from numpy import asarray
 import numpy as np
 
-# load the image and convert image to numpy array
-image = Image.open('dog.jpg')
-img = asarray(image)
-print(f'The shape of the original image is: {img.shape}')
 
-# Reshape
-img = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-print('The shape of the initially reshaped image is:', img.shape)
+# Tensor Train decomposition for a square image
+def tt_square_image(image):
+    # Load the image and convert image to numpy array
+    image = Image.open(image)
+    img_array = np.asarray(image)
+    print(f'The shape of the original image is: {img_array.shape}')
+    # Reshape
+    img_array = np.reshape(img_array, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+    print('The shape of the initially reshaped image is:', img_array.shape)
+    no_dim = len(img_array.shape)
+    print(f'The number of dimensions is now: {no_dim}')
+    U = []
+    S = []
+    VH = []
+    for i in range(no_dim - 1):
+        u, s, vh = svd(img_array)
+        U.append(u)
+        S.append(s)
+        VH.append(vh)
+        img_array = s
+        print(s.shape)
+    print(f'Length of U = {len(U)}, length of S = {len(S)}, length of VH = {len(VH)}')
+    return U, S, VH
 
-# SVD
-no_dim = len(img.shape)
 
-u, s, vh = np.linalg.svd(img, full_matrices=False)
+# Single Value Decomposition
+def svd(image):
+    u, s, vh = np.linalg.svd(image, full_matrices=True, compute_uv=True)
+    return u, s, vh
 
-# count = 0
-# U = []
-# S = []
-# VH = []
+
+tt_square_image('dog.jpg')
+
+# # Reconstruction
+# recon = np.matmul(u * s[..., None, :], vh)
 #
-# while count < no_dim:
-#     u, s, vh = np.linalg.svd(img, full_matrices=False)
-#     U.append(u)
-#     S.append(s)
-#     VH.append(vh)
-#     img = s
-#     no_dim -= 1
-#     count += 1
-#     print(f'Dim of img after SVD run no {count}: {img.shape}')
-#
-# print(f'The shapes of: U = {U.shape}, S = {S.shape}, VH = {VH.shape}')
-
-# Reconstruction
-recon = np.matmul(u * s[..., None, :], vh)
-
-# Reshape
-recon_reshaped = np.reshape(recon, (512, 512, 3))
-print('The shape of the final reshaped image is:', recon_reshaped.shape)
-print(type(recon_reshaped))
-recon_reshaped_image = Image.fromarray((recon_reshaped * 255).astype(np.uint8))
-recon_reshaped_image.show()
+# # Reshape
+# recon_reshaped = np.reshape(recon, (512, 512, 3))
+# print('The shape of the final reshaped image is:', recon_reshaped.shape)
+# print(type(recon_reshaped))
+# recon_reshaped_image = Image.fromarray((recon_reshaped * 255).astype(np.uint8))
+# recon_reshaped_image.show()
