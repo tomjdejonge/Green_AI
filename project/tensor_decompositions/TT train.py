@@ -54,26 +54,32 @@ def TT(pic):
               '                  col_dims = {n}, \n'
               '                  ranks    = {r}'.format(d=order, m=row_dims, n=col_dims, r=ranks))
 
-        #
-        # x = np.matmul(ut[0], ut[1])
-        # y = np.matmul(ut[2], ut[3])
         return cores
     else:
-        return DimensionError
+        print('wrong dimensions')
 
-def mul(list):
+def full(list,x):
+    order = len(x.shape) // 2
+    row_dims = x.shape[:order]
+    col_dims = x.shape[order:]
+    ranks = [1] * (order + 1)
+
     #split
-    leng = len(list)//2
+    full = list[0].reshape(row_dims[0] * col_dims[0], ranks[1])
 
-    first = (list[:leng])
-    last = (list[(leng):])
-    # print(first.shape, last.shape)
-    x = np.matmul(first[0],first[1].Transposed)
-    y = np.matmul(last[0],last[1])
-    return  np.matmul(x,y) #(first[0]*first[1])*(last[0]*last[1])
+    for i in range (1, order):
+        full = full.dot(cores[i].reshape(ranks[i], row_dims[i]*col_dims[i]*ranks[i+1]))
+
+        full = full.reshape(np.prod(row_dims[:i + 1]) * np.prod(col_dims[:i + 1]),ranks[i + 1])
+
+    return full
 
 
-TT(dog)
+
+print(TT(dog))
+
+full(TT(dog),dog)
+
 
 
 
