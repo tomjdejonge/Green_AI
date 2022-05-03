@@ -2,9 +2,8 @@ import numpy as np
 from scipy import linalg
 from PIL import Image
 
-
 dog = np.asarray(Image.open('dog.jpg'))
-x = np.ndarray(shape=(512, 512))
+x = np.reshape(dog, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
 threshold = 0
 max_rank = np.infty
 
@@ -50,8 +49,8 @@ for i in range(order - 1):
 # define last TT core
 cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
 
-print('\n'
-                'Tensor train with order    = {d}, \n'
-                '                  row_dims = {m}, \n'
-                '                  col_dims = {n}, \n'
-                '                  ranks    = {r}'.format(d=order, m=row_dims, n=col_dims, r=ranks))
+print("\n"
+      "Tensor train with order    = {d}, \n"
+      "                  row_dims = {m}, \n"
+      "                  col_dims = {n}, \n"
+      "                  ranks    = {r}".format(d=order, m=row_dims, n=col_dims, r=ranks))
