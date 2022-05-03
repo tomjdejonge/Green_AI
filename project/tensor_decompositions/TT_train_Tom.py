@@ -92,6 +92,7 @@ def tt_reconstruction_1(cores, row_dims, col_dims, ranks, order):
 
     return tt_mat
 
+
 # Tensor Train Reconstruction 2
 def tt_reconstruction_2(cores, row_dims, col_dims, ranks, order):
     if ranks[0] != 1 or ranks[-1] != 1:
@@ -102,8 +103,7 @@ def tt_reconstruction_2(cores, row_dims, col_dims, ranks, order):
 
     for i in range(1, order):
         # contract full_tensor with next TT core and reshape
-        full_tensor = full_tensor.dot(cores[i].reshape(ranks[i],
-                                                            row_dims[i] * col_dims[i] * ranks[i + 1]))
+        full_tensor = full_tensor.dot(cores[i].reshape(ranks[i], row_dims[i] * col_dims[i] * ranks[i + 1]))
         full_tensor = full_tensor.reshape(np.prod(row_dims[:i + 1]) * np.prod(col_dims[:i + 1]), ranks[i + 1])
 
     # reshape and transpose full_tensor
@@ -119,7 +119,16 @@ def tt_reconstruction_2(cores, row_dims, col_dims, ranks, order):
 reconstructed_dog = tt_reconstruction_2(cores, row_dims, col_dims, ranks, order)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
 reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
-new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
+new_image = Image.fromarray(reshaped_dog.astype(np.uint8))
 new_image.show()
-print(new_image.size)
-print(Image.open('dog.jpg').size)
+
+
+# Check if images are not identical
+def are_images_equal(im1, im2):
+    if list(im1.getdata()) == list(im2.getdata()):
+        print("\nThe images are identical")
+    else:
+        print("\nThe images are different")
+
+
+are_images_equal(new_image, Image.open('dog.jpg'))
