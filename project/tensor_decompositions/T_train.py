@@ -1,10 +1,11 @@
 from PIL import Image
 from scipy import linalg
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # Tensor Train Decomposition
-def tt_decomposition(img, threshold=0, max_rank=np.infty):
+def tt_decomposition(img, threshold=0, max_rank=50):
     # Load the image and convert image to correct numpy array
     img = Image.open(img)
     x = np.asarray(img)
@@ -36,6 +37,7 @@ def tt_decomposition(img, threshold=0, max_rank=np.infty):
         # rank reduction
         if threshold != 0:
             indices = np.where(s / s[0] > threshold)[0]
+            print(f'indices{i} = {indices}indices' )
             u = u[:, indices]
             s = s[indices]
             v = v[indices, :]
@@ -115,17 +117,24 @@ def tt_reconstruction_2(cores, row_dims, col_dims, ranks, order):
 
     return full_tensor
 
+def compare(image1, image2):
+    f = plt.figure()
+    f.add_subplot(1,2, 1)
+    plt.imshow(image1,interpolation='nearest')
+    plt.axis('off')
+    f.add_subplot(1,2, 2)
+    plt.imshow(image2,interpolation='nearest')
+    plt.axis('off')
+    plt.show(block=True)
+
+
 
 reconstructed_dog = tt_reconstruction_2(cores, row_dims, col_dims, ranks, order)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
 reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
-new_image.show()
-print(new_image.size)
-print(Image.open('dog.jpg').size)
+old_image = Image.open('dog.jpg')
 
 
-
-
-
+compare(old_image,new_image)
 
