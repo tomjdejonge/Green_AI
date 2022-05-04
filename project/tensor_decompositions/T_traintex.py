@@ -4,68 +4,56 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-
 # Tensor Train Decomposition
-def tt_decomposition(img, epsilon=0.5):
+def tt_decomposition(img, epsilon=0):
     # Load the image and convert image to correct numpy array
     img = Image.open(img)
     x = np.asarray(img)
     print(f'The shape of the original image is: {x.shape}')
-    x = np.reshape(x, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-    print('The shape of the initially reshaped image is:', x.shape)
-    # Define order, row_dims, col_dims, ranks and cores
-    order = len(x.shape) // 2
-    row_dims = x.shape[:order]
-    col_dims = x.shape[order:]
-    ranks = [1] * (order + 1)
+    C = np.reshape(x, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+    print('The shape of the initially reshaped image is:', C.shape)
+    n = [4, 4, 4, 4, 4, 4, 4, 4, 4, 3]
+    d = np.ndim(C)
     cores = []
     terror = 0
-    delta = epsilon / (np.sqrt(order*2)) * linalg.norm(x)
-    print(f'delta = {delta}')
-    # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
-    p = [order * j + i for i in range(order) for j in range(2)]
+    delta = epsilon / (np.sqrt(d)) * linalg.norm(C)
+    r = [1] * (d)
+    r[0] = 1
+    terror = 0
+    print(C)
 
-    print(f'p= {p}, zelf = {p[:3]}')
-    y = np.transpose(x, p).copy()
+    for i in range(d-1):
+        print(f'r = {r}, n = {n}')
+        m = int(r[i] * n[i])                                   # r_(k-1)*n_k
+        b = int((torch.numel(torch.from_numpy(C))/m))  # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
+        C = np.reshape(C, [m, b])
+        u,s,v = svd(C)
 
-    # decompose the full tensor
-    for i in range(order - 1):
-        # reshape residual tensor
-        m = ranks[i] * row_dims[i] * col_dims[i]            #r_(k-1)*n_k
-        n = int((torch.numel(torch.from_numpy(y))  /m))     # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
-        y = np.reshape(y, [m, n])
-
-        # apply SVD in order to isolate modes
-        [u, s, v] = svd(y)                                  #svd
         rk = 1
         s = np.diag(s)
-        error = linalg.norm((s[rk+1:]))
-        print(f'error {i} = {error}')
-        while error > delta:
-            rk += 1
-            error = linalg.norm(s[rk+1:])
+        error = linalg.norm((s[rk + 1:]))
+        if epsilon != 0:
+            while error > delta:
+                rk += 1
+                error = linalg.norm(s[rk+1:])
+            terror = terror + error**2
+            print(f'r{i} = {rk}')
+            r[i+1] = rk
+        else:
+            r[i+1] = u.shape[1]
+        cores.append(np.reshape(u[:,1:r(i+1)], [r[i],n[i],r[i+1]]))
+        print(f'indices = {r[i+1]}')
+        C = (s[:r[i+1]]).dot((v[:r[i+1], :]))
+        # print(f'C = {C}')
+    # cores.append(np.reshape(u[:r[i+1]] []            #C, [r[-2], n[-1], n[-1], 1]))
 
-        terror = terror + error**2
-        print(f'rk = {rk}')
-        # define new TT core
-        ranks[i + 1] = u.shape[1]
-        cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
 
-        # print(f'{s[1:rk,1:rk].info}')
-
-        # set new residual tensor
-        # y = s.dot(v)            # S * V^T
-        y = (s[1:rk,1:rk]).dot(np.transpose(v[:,1:rk]))
-
-    # define last TT core
-    cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
-    print(len(cores))
     print("\n"
           "Tensor train created with order    = {d}, \n"
           "                  row_dims = {m}, \n"
           "                  col_dims = {n}, \n"
           "                  ranks    = {r}  \n"
-          "                  terror   = {t}"    .format(d=order, m=row_dims, n=col_dims, r=ranks, t=terror))
+          "                  terror   = {t}"    .format(d=d, m=n, n=n, r=r, t=terror))
     return cores, row_dims, col_dims, ranks, order
 
 
