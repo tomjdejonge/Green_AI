@@ -6,23 +6,26 @@ import torch
 
 
 # Tensor Train Decomposition
-def tt_decomposition(img, threshold=0.01):
+def tt_decomposition(img, epsilon=0.5):
     # Load the image and convert image to correct numpy array
     img = Image.open(img)
     x = np.asarray(img)
     print(f'The shape of the original image is: {x.shape}')
     x = np.reshape(x, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
     print('The shape of the initially reshaped image is:', x.shape)
-
     # Define order, row_dims, col_dims, ranks and cores
     order = len(x.shape) // 2
     row_dims = x.shape[:order]
     col_dims = x.shape[order:]
     ranks = [1] * (order + 1)
     cores = []
-
+    terror = 0
+    delta = epsilon / (np.sqrt(order*2)) * linalg.norm(x)
+    print(f'delta = {delta}')
     # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
     p = [order * j + i for i in range(order) for j in range(2)]
+
+    print(f'p= {p}, zelf = {p[:3]}')
     y = np.transpose(x, p).copy()
 
     # decompose the full tensor
@@ -34,31 +37,33 @@ def tt_decomposition(img, threshold=0.01):
 
         # apply SVD in order to isolate modes
         [u, s, v] = svd(y)                                  #svd
-        print(f' S[i] = {s[0]}')
-        # rank reduction
-        if threshold != 0:                                  #Threshold = delta
-            indices = np.where(s / s[0] > threshold)[0]     #waarden waar
+        rk = 1
+        s = np.diag(s)
+        error = linalg.norm((s[rk+1:]))
+        print(f'error {i} = {error}')
+        while error > delta:
+            rk += 1
+            error = linalg.norm(s[rk+1:])
 
-            u = u[:, indices]
-            s = s[indices]
-            v = v[indices, :]
-
-
+        terror = terror + error**2
+        print(f'rk = {rk}')
         # define new TT core
         ranks[i + 1] = u.shape[1]
         cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
 
         # set new residual tensor
-        y = np.diag(s).dot(v)                               # S * V^T
+        # y = s.dot(v)            # S * V^T
+        y = (s[1:rk,1:rk]).dot(v[:,1:rk])
 
     # define last TT core
     cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
-
+    print(len(cores))
     print("\n"
           "Tensor train created with order    = {d}, \n"
           "                  row_dims = {m}, \n"
           "                  col_dims = {n}, \n"
-          "                  ranks    = {r}".format(d=order, m=row_dims, n=col_dims, r=ranks))
+          "                  ranks    = {r}  \n"
+          "                  terror   = {t}"    .format(d=order, m=row_dims, n=col_dims, r=ranks, t=terror))
     return cores, row_dims, col_dims, ranks, order
 
 
@@ -151,3 +156,14 @@ old_image = Image.open('dog.jpg')
 # are_images_equal(new_image, old_image)
 
 # compare(old_image,new_image)
+print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
+reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
+new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
+old_image = Image.open('dog.jpg')
+
+print(f'Pixels in new image {pixelcount(new_image)}')
+print(f'Pixels in old image {pixelcount(old_image)}')
+
+are_images_equal(new_image, old_image)
+
+compare(old_image,new_image)
