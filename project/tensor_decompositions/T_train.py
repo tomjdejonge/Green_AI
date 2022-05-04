@@ -2,10 +2,11 @@ from PIL import Image
 from scipy import linalg
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 
 # Tensor Train Decomposition
-def tt_decomposition(img, threshold=0, max_rank=50):
+def tt_decomposition(img, threshold=0.01):
     # Load the image and convert image to correct numpy array
     img = Image.open(img)
     x = np.asarray(img)
@@ -27,31 +28,28 @@ def tt_decomposition(img, threshold=0, max_rank=50):
     # decompose the full tensor
     for i in range(order - 1):
         # reshape residual tensor
-        m = ranks[i] * row_dims[i] * col_dims[i]
-        n = np.prod(row_dims[i + 1:]) * np.prod(col_dims[i + 1:])
+        m = ranks[i] * row_dims[i] * col_dims[i]            #r_(k-1)*n_k
+        n = int((torch.numel(torch.from_numpy(y))  /m))     # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
         y = np.reshape(y, [m, n])
 
         # apply SVD in order to isolate modes
-        [u, s, v] = svd(y)
-
+        [u, s, v] = svd(y)                                  #svd
+        print(f' S[i] = {s[0]}')
         # rank reduction
-        if threshold != 0:
-            indices = np.where(s / s[0] > threshold)[0]
-            print(f'indices{i} = {indices}indices' )
+        if threshold != 0:                                  #Threshold = delta
+            indices = np.where(s / s[0] > threshold)[0]     #waarden waar
+
             u = u[:, indices]
             s = s[indices]
             v = v[indices, :]
-        if max_rank != np.infty:
-            u = u[:, :np.minimum(u.shape[1], max_rank)]
-            s = s[:np.minimum(s.shape[0], max_rank)]
-            v = v[:np.minimum(v.shape[0], max_rank), :]
+
 
         # define new TT core
         ranks[i + 1] = u.shape[1]
         cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
 
         # set new residual tensor
-        y = np.diag(s).dot(v)
+        y = np.diag(s).dot(v)                               # S * V^T
 
     # define last TT core
     cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
@@ -127,7 +125,19 @@ def compare(image1, image2):
     plt.axis('off')
     plt.show(block=True)
 
+def are_images_equal(im1, im2):
+    if list(im1.getdata()) == list(im2.getdata()):
+        print("\nThe images are identical")
+    else:
+        print("\nThe images are different")
 
+def pixelcount(img):
+    count = 0
+    for y in range(img.height):
+        for x in range(img.width):
+            count += 1
+
+    return count
 
 reconstructed_dog = tt_reconstruction_2(cores, row_dims, col_dims, ranks, order)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
@@ -135,6 +145,9 @@ reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
 old_image = Image.open('dog.jpg')
 
+# print(f'Pixels in new image {pixelcount(new_image)}')
+# print(f'Pixels in old image {pixelcount(old_image)}')
 
-compare(old_image,new_image)
+# are_images_equal(new_image, old_image)
 
+# compare(old_image,new_image)
