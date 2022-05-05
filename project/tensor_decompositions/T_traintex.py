@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 
 # Tensor Train Decomposition
-def tt_decomposition(img, epsilon=1):
+def tt_decomposition(img, epsilon=0):
     # Load the image and convert image to correct numpy array
     img = Image.open(img)
     x = np.asarray(img)
@@ -16,8 +16,8 @@ def tt_decomposition(img, epsilon=1):
     d = np.ndim(C)
     cores = []
     terror = 0
-    delta = epsilon / (np.sqrt(d)) * linalg.norm(C)
-    r = [1] * (d)
+    delta = epsilon / (np.sqrt(d-1)) * np.linalg.norm(x)
+    r = [0] * (d)
     r[0] = 1
     terror = 0
 
@@ -30,30 +30,32 @@ def tt_decomposition(img, epsilon=1):
 
         rk = 1
         s = np.diag(s)
-        error = linalg.norm((s[rk + 1:]))
+        error = linalg.norm((s[rk+1:]))
+        print(f'error = {error}')
         if epsilon != 0:
             while error > delta:
                 rk += 1
                 error = linalg.norm(s[:rk+1:])
-            terror = terror + error**2
+            print(f'error = {error}')
             print(f'r{i} = {rk}')
             r[i+1] = rk
         else:
             r[i+1] = u.shape[1]
-        cores.append(np.reshape(u, [r[i], n[i], n[i], r[i + 1]]))
+        terror += error ** 2
+        cores.append(np.reshape(u, [r[i], n[i], r[i + 1]]))
         print(f'indices = {r[i+1]}')
         C = (s[:r[i+1]]).dot((v[:r[i+1], :]))
         # print(f'C = {C}')
     cores.append(np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
-
+    rerror = np.sqrt(terror)/np.linalg.norm(x)
 
     print("\n"
           "Tensor train created with order    = {d}, \n"
           "                  row_dims = {m}, \n"
           "                  col_dims = {n}, \n"
           "                  ranks    = {r}  \n"
-          "                  terror   = {t}"    .format(d=d, m=n, n=n, r=r, t=terror))
-    return cores, x
+          "                  terror   = {t}"    .format(d=d, m=n, n=n, r=r, t=rerror))
+    return cores, n, r, d
 
 
 # Single Value Decomposition
@@ -63,55 +65,27 @@ def svd(x):
 
 
 dog_tensor = tt_decomposition('dog.jpg')
-cores, x = dog_tensor
+cores, n, r, d = dog_tensor
 
-
-# Tensor Train Reconstruction 1
-def tt_reconstruction_1(cores, row_dims, col_dims, ranks, order):
-    tt_mat = cores[0].reshape(row_dims[0], col_dims[0], ranks[1])
-
-    for i in range(1, order):
-        # contract tt_mat with next TT core, permute and reshape
-        tt_mat = np.tensordot(tt_mat, cores[i], axes=(2, 0))
-        tt_mat = tt_mat.transpose([0, 2, 1, 3, 4]).reshape((np.prod(row_dims[:i + 1]),
-                                                            np.prod(col_dims[:i + 1]), ranks[i + 1]))
-
-    # reshape into vector or matrix
-    m = np.prod(row_dims)
-    n = np.prod(col_dims)
-    if n == 1:
-        tt_mat = tt_mat.reshape(m)
-    else:
-        tt_mat = tt_mat.reshape(m, n)
-
-    return tt_mat
 
 # Tensor Train Reconstruction 2
-def tt_reconstruction_2(cores,x):
-    x = np.reshape(x, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-    order = len(x.shape) // 2
-    row_dims = x.shape[:order]
-    col_dims = x.shape[order:]
-    ranks = [1] * (order + 1)
-
-    if ranks[0] != 1 or ranks[-1] != 1:
-        raise ValueError("The first and last rank have to be 1!")
+def tt_reconstruction_2(cores, n, r, d):
 
         # reshape first core
-    full_tensor = cores[0].reshape(row_dims[0] * col_dims[0], ranks[1])
-
-    for i in range(1, order):
+    full_tensor = cores[0].reshape(n[0], r[1])
+    print(f'd={d}')
+    for i in range(1, d-1):
         # contract full_tensor with next TT core and reshape
-        full_tensor = full_tensor.dot(cores[i].reshape(ranks[i],
-                                                            row_dims[i] * col_dims[i] * ranks[i + 1]))
-        full_tensor = full_tensor.reshape(np.prod(row_dims[:i + 1]) * np.prod(col_dims[:i + 1]), ranks[i + 1])
+        full_tensor = full_tensor.dot(cores[i].reshape(r[i], n[i] * r[i+1]))
+        full_tensor = full_tensor.reshape(np.prod(n[:i + 1]), r[i+1])
 
     # reshape and transpose full_tensor
-    p = [None] * 2 * order
-    p[::2] = row_dims
-    p[1::2] = col_dims
-    q = [2 * i for i in range(order)] + [1 + 2 * i for i in range(order)]
-    full_tensor = full_tensor.reshape(p).transpose(q)
+    p = [None] * 2 * d
+    p[::2] = n
+    p[1::2] = n
+    q = [2 * i for i in range(d//2)] + [1 + 2 * i for i in range(d//2)]
+    print(q)
+    full_tensor = full_tensor.reshape(n).transpose(q)
 
     return full_tensor
 
@@ -139,7 +113,7 @@ def pixelcount(img):
 
     return count
 
-reconstructed_dog = tt_reconstruction_2(cores, x)
+reconstructed_dog = tt_reconstruction_2(cores, n,r,d)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
 reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
