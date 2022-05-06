@@ -16,12 +16,13 @@ def tt_decomposition(img, epsilon=0):
     delta = (epsilon * linalg.norm(A)) / np.sqrt(d - 1)
     # 2: temporary tensor: C=A, r_0=1
     C = A
-    r = [1] * d
+    r = np.zeros(d-1)
+    r[0] = 1
     # 3: iterate
-    cores = []
-    n = [4, 4, 4, 4, 4, 4, 4, 4, 4, 3]
-    terror = 0
-    for k in range(d-1):
+    tt_cores = np.zeros(d+1)
+    n = A.shape
+    total_error = 0
+    for k in range(1, d-1):
         # 4: reshape(C, [r_(k-1)*n_k, (numel(C)/r_(k-1)*n_k)])
         print(f'r = {r}, n = {n}')
         x = int(r[k] * n[k])  # r_(k-1)*n_k
@@ -31,30 +32,30 @@ def tt_decomposition(img, epsilon=0):
         u, s, v = linalg.svd(C, full_matrices=False)
         rk = 1
         s = np.diag(s)
-        error = linalg.norm((s[:rk+1]))
+        error = linalg.norm((s[rk+1:]))
         if epsilon != 0:
             while error > delta:
                 rk += 1
-                error = linalg.norm(s[:rk+1])
+                error = linalg.norm(s[rk+1:])
                 print('error', error, rk)
-            terror += error ** 2
+            total_error += error ** 2
             print(f'r{k} = {rk}')
             r[k+1] = rk
         else:
             r[k+1] = u.shape[1]
         # 6: New core: G_k:=reshape(U, [r_(k-1), n_k, r_k])
-        cores.append(np.reshape(u, [r[k], n[k], r[k+1]]))
+        tt_cores[k] = np.reshape(u[:, :r[k+1]], [r[k], n[k], r[k+1]])
         print(f'indices = {r[k+1]}')
         # 7: C=SV^T
         C = (s[:r[k+1]]).dot((v[:r[k+1], :]))
-    cores.append(np.reshape(C, [r[-1], n[-1], 1]))  # C, [r[-2], n[-1], n[-1], 1]))
+    tt_cores.append(np.reshape(C, [r[-1], n[-1], 1]))  # C, [r[-2], n[-1], n[-1], 1]))
 
     print("\n"
           "Tensor train created with order    = {d}, \n"
           "                  row_dims = {m}, \n"
           "                  col_dims = {n}, \n"
           "                  ranks    = {r}  \n"
-          "                  total error   = {t}".format(d=d, m=n, n=n, r=r, t=terror))
+          "                  total error   = {t}".format(d=d, m=n, n=n, r=r, t=total_error))
     return cores, A
 
 # Tensor Train Reconstruction 2
