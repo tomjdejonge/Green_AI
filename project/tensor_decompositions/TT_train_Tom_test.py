@@ -132,3 +132,5 @@ def are_images_equal(im1, im2):
 
 
 are_images_equal(new_image, Image.open('dog.jpg'))
+
+print(cores)
