@@ -20,7 +20,7 @@ def tt_decomposition(img, epsilon=0.01):
                 for k in range(3):
                     res += pow(x[i][j][k], 2)
                     count += 1
-        print(f'count = {count}')
+        # print(f'count = {count}')
         return round(np.sqrt(res), 4)
 
     def frobenius_2(x):
@@ -32,8 +32,8 @@ def tt_decomposition(img, epsilon=0.01):
     n = [4, 4, 4, 4, 4, 4, 4, 4, 4, 3]
     d = np.ndim(C)
     cores = []
-    print(f'Selfmade frobenius x = {frobenius_2(x)}')
-    print(f'NP norm x = {np.linalg.norm(x)}')
+    # print(f'Selfmade frobenius x = {frobenius_1(x)}')
+    print(f'numpy frobenius norm of x = {np.linalg.norm(x)}')
     delta = (epsilon / (np.sqrt(d-1))) * frobenius_2(x)
     r = [0] * d
     r[0] = 1
