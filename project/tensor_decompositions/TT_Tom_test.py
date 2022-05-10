@@ -50,7 +50,16 @@ def tt_decomposition(img, epsilon=0.01):
         b = int((torch.numel(torch.from_numpy(C))/m))  # numel(C)/r_(k-1)*n_k
         print(f'b = {b}')
         C = np.reshape(C, [m, b])
-        u, s, v = linalg.svd(C, full_matrices=False)
+        u, s, v_t = linalg.svd(C, full_matrices=False)
+        print(u.shape, s.shape, v_t.shape)
+
+        res = np.matmul(u, s)
+        res_2 = np.matmul(res, v_t)
+        if res_2.all() == C.all():
+            print('identical')
+        else:
+            print(f'fail: {res_2.shape}')
+
 
         rk = 1
         s = np.diag(s)
@@ -67,7 +76,7 @@ def tt_decomposition(img, epsilon=0.01):
         terror += error ** 2
         cores.append(np.reshape(u[:, :r[i+1]], [r[i], n[i], r[i+1]]))
         S = (s[:r[i+1], :r[i+1]])
-        V_T = (np.transpose(v[:, :r[i+1]]))
+        V_T = (v_t[:, :r[i+1]])
         C = np.matmul(S, V_T)
         print(f'[r[-2], n[-1], 1], [r[-1], n[-1], 1] = {[r[-2], n[-1], 1], [r[-1], n[-1], 1]}\n')
     cores.append(np.reshape(C, [r[-1], n[-1], 1]))       # C, [r[-2], n[-1], n[-1], 1]))
