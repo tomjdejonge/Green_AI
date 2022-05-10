@@ -17,7 +17,8 @@ def tt_decomposition(img, epsilon=0.01):
     cores = []
     delta1 = epsilon / (np.sqrt(d-1)) * np.linalg.norm(x)
     delta =  epsilon / (np.sqrt(d-1)) * fro(x)
-    print(f' delta = {delta}, delta1 = {delta1}')
+    delta2 = epsilon / (np.sqrt(d-1)) * frob(x)
+    print(f' delta = {delta}, delta1 = {delta1} , delta2 = {delta2}')
     r = [0] * (d)
     r[0] = 1
 
@@ -37,7 +38,7 @@ def tt_decomposition(img, epsilon=0.01):
         error = linalg.norm((s[rk+1:]))
 
         if epsilon != 0:
-            while error > delta:
+            while error > delta2:
                 rk +=1
                 error = linalg.norm(s[rk+1:])
             # print(f'error = {error}')
@@ -49,7 +50,7 @@ def tt_decomposition(img, epsilon=0.01):
         # cores.append(np.reshpa)
         cores.append(np.reshape(u[:,:r[i+1]], [r[i], n[i], r[i + 1]]))
         # print(f'indices = {r[i+1]}')
-        C = (s[0:r[i+1],0:r[i+1]]).dot(np.transpose(v[:,r[i+1]]))
+        C = (s[0:r[i+1],0:r[i+1]]).dot(np.transpose(v[:,0:r[i+1]]))
 
     cores.append(np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
     rerror = np.sqrt(terror)/np.linalg.norm(x)
@@ -69,12 +70,19 @@ def svd(x):
     return u, s, v
 
 def fro(x):
+    count = 0
     res = 0
     for i in range(len(x)):
         for j in range(len(x)):
             for k in range(3):
                 res += pow(x[i][j][k], 2)
-    return np.sqrt(res)
+                count += 1
+    print(f'count = {count}')
+    return round(np.sqrt(res),4)
+
+def frob(tensor):
+    tensor = tensor.flatten()
+    return np.sqrt(np.matmul(tensor.transpose(), tensor))
 
 dog_tensor = tt_decomposition('dog.jpg')
 cores, n, r, d = dog_tensor
