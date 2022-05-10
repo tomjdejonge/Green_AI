@@ -18,39 +18,41 @@ def tt_decomposition(img, epsilon=0.01):
     delta1 = epsilon / (np.sqrt(d-1)) * np.linalg.norm(x)
     delta =  epsilon / (np.sqrt(d-1)) * fro(x)
     delta2 = epsilon / (np.sqrt(d-1)) * frob(x)
-    print(f' delta = {delta}, delta1 = {delta1} , delta2 = {delta2}')
+    # print(f' delta = {delta}, delta1 = {delta1} , delta2 = {delta2}')
     r = [0] * (d)
     r[0] = 1
 
-    p = [d//2 * j + i for i in range(d//2) for j in range(2)]
-
-    C = np.transpose(C, p).copy()
-
     for i in range(d-1):
         m = int(r[i] * n[i])                                   # r_(k-1)*n_k
-        b = int((torch.numel(torch.from_numpy(C))/m))  # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
+        b = int(C.size/m)                                   # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
+        print(f'C.size{i} = {C.size}')
         C = np.reshape(C, [m, b])
-        u,s,v = linalg.svd(C, full_matrices=False)
         terror = 0
 
-        rk = 1
+        [u, s, v] = linalg.svd(C, full_matrices=False)          #(u @ np.diag(s) @ v).astype(int)
+
+        rk = 0
         s = np.diag(s)
         error = linalg.norm((s[rk+1:]))
-
+        print(f'{i,u.shape,s.shape,v.shape}')
         if epsilon != 0:
-            while error > delta2:
+            while error > delta:
                 rk +=1
                 error = linalg.norm(s[rk+1:])
             # print(f'error = {error}')
             # print(f'r{i} = {rk}')
+        else:
+            rk = 1
 
         r[i+1] = rk
-
         terror += error ** 2
         # cores.append(np.reshpa)
         cores.append(np.reshape(u[:,:r[i+1]], [r[i], n[i], r[i + 1]]))
+        print(f's{i} = {s[0:r[i+1],0:r[i+1]]}')
+        print(f'v{i} = {v[:,0:r[i+1]]}')
         # print(f'indices = {r[i+1]}')
-        C = (s[0:r[i+1],0:r[i+1]]).dot(np.transpose(v[:,0:r[i+1]]))
+        print(f'{i, s[:r[i+1],:r[i+1]].shape, (v[:r[i+1],:]).shape}')
+        C = (s[:r[i+1],:r[i+1]])@(v[:r[i+1],:])
 
     cores.append(np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
     rerror = np.sqrt(terror)/np.linalg.norm(x)
@@ -77,7 +79,6 @@ def fro(x):
             for k in range(3):
                 res += pow(x[i][j][k], 2)
                 count += 1
-    print(f'count = {count}')
     return round(np.sqrt(res),4)
 
 def frob(tensor):
