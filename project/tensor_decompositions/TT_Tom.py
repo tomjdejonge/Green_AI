@@ -34,15 +34,16 @@ def tt_decomposition(img, epsilon: float = 0):
         c = np.reshape(c, [x, y])
         # 4: SVD
         u, s, v = linalg.svd(c, full_matrices=False)
-        rk = 0
+        rk = 1
         s = np.diag(s)
+        print(f's_min: {s.min()}\ns_max: {s.max()}')
         error = linalg.norm((s[rk+1:]))
         print(f'error before iteration: {error}')
         if epsilon != 0:
             while error > delta:
                 print(f'rk: {rk}\nerror: {error}')
                 rk += 1
-                error = linalg.norm((s[:rk+1:]))
+                error = linalg.norm((s[rk+1:]))
             print(f'error after iteration: {error}')
             print(f'rk: {rk}')
             r[k+1] = rk
@@ -55,10 +56,10 @@ def tt_decomposition(img, epsilon: float = 0):
         # print(r[k+1])
         tt_cores.append(np.reshape(u, [r[k], n[k], r[k+1]]))
 
-        # s_1 = s[:(r[k+1]), :(r[k+1])]
-        # v_transposed = (v[:, (r[k+1])]).transpose
+        # s_1 = s[:, :r[k+1]]  # , :(r[k+1])]
+        # v_transposed = (v[:r[k+1]]).transpose
         # c = np.matmul(s_1, v_transposed)
-        c = (s[:r[k+1]]).dot((v[:r[k+1], :]))
+        c = np.matmul((s[:r[k+1]]), (v[:r[k+1], :]))
     tt_cores.append(np.reshape(c, (r[-1], n[-1], 1)))
     rel_error = np.sqrt(total_error) / np.linalg.norm(a)
 
@@ -105,7 +106,7 @@ def compare(image1, image2):
     plt.show(block=True)
 
 
-dog_tt_cores, dog_n, dog_r, dog_d = tt_decomposition('dog.jpg', 0.0)
+dog_tt_cores, dog_n, dog_r, dog_d = tt_decomposition('dog.jpg', 0.5)
 reconstructed_dog = tt_reconstruction(dog_tt_cores, dog_n, dog_r, dog_d)
 reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
 old_image = Image.open('dog.jpg')
