@@ -11,14 +11,14 @@ a = p
 d = 3
 r0 = 1
 r3 = r0
-epsilon = 0.9
+epsilon = 0.2
 delta = (epsilon / np.sqrt(d-1)) * np.linalg.norm(a)
 
 n = a.shape
 r = np.zeros(d+1)
 r[0] = r0
 r[d] = r3
-g = np.zeros(d)
+g = []
 
 c = a
 
@@ -28,21 +28,30 @@ for k in range(d-1):
     c = np.reshape(c, [m, b])
     # print(c.shape)
     [U, S, V] = linalg.svd(c, full_matrices=False)
-    # s = np.diagonal(S)
-    print(S.shape)
-    rank = 1
+    V = V.transpose()
+    s = np.diag(S)
+    rank = 0
+    # print(S[rank])
     error = np.linalg.norm(s[rank])
     # print(error)
     while error > delta:
         rank += 1
-        error = np.linalg.norm(s[rank])
-    r[k+1] = rank
+        error = np.linalg.norm(s[rank+1:])
+    r[k+1] = rank + 1
     # print(int(r[k+1]))
     # print(int(n[k]))
     # print(int(r[k]))
-    g[k] = np.reshape(U[:, :int(r[k+1])], (int(r[k]), n[k], int(r[k+1])))
-    c = S[:r[k + 1], :r[k + 1]] @ V[:, :r[k + 1]]
-g[d] = np.reshape(c, (r[d], n[d], r[d+1]))
+    # print((U[:, :int(r[k+1])]).shape)
+    g.append(np.reshape(U[:, :int(r[k+1])], [int(r[k]), int(n[k]), int(r[k+1])]))
+    # print(np.linalg.norm(g[k]))
+    # print(S.shape)
+    p_1 = s[:int(r[k + 1]), :int(r[k + 1])]
+    # print(p_1)
+    p_2 = V[:, :int(r[k + 1])]
+    print(p_2)
+    c = p_1 @ p_2.transpose()
+    # print(c.shape)
+g.append(np.reshape(c, (r[d], n[d], r[d+1])))
 # print(g[0].shape)
 # print(g[1].shape)
 # print(g[2].shape)
