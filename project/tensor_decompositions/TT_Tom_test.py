@@ -12,17 +12,6 @@ def tt_decomposition(img, epsilon=0.01):
     x = np.asarray(img)
 
     # Frobenius norm
-    def frobenius_1(x):
-        count = 0
-        res = 0
-        for i in range(len(x)):
-            for j in range(len(x)):
-                for k in range(3):
-                    res += pow(x[i][j][k], 2)
-                    count += 1
-        # print(f'count = {count}')
-        return round(np.sqrt(res), 4)
-
     def frobenius_2(x):
         return np.linalg.norm(x)
 
