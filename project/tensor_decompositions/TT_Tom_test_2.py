@@ -1,6 +1,7 @@
 from PIL import Image
 from scipy import linalg
 import numpy as np
+import tensorly as ty
 # import matplotlib.pyplot as plt
 
 
@@ -29,6 +30,7 @@ for k in range(d-1):
     # print(c.shape)
     [U, S, V] = linalg.svd(c, full_matrices=False)
     V = V.transpose()
+    # print(V)
     s = np.diag(S)
     rank = 0
     # print(S[rank])
@@ -48,13 +50,25 @@ for k in range(d-1):
     p_1 = s[:int(r[k + 1]), :int(r[k + 1])]
     # print(p_1)
     p_2 = V[:, :int(r[k + 1])]
-    print(p_2)
+    # print(p_2)
     c = p_1 @ p_2.transpose()
-    # print(c.shape)
-g.append(np.reshape(c, (r[d-1], n[d-1], r[d])))
+    # print(c)
+# print(r[d-1])
+# print(n[d-1])
+# print(r[d])
+g.append(np.reshape(c, (int(r[d-1]), int(n[d-1]), int(r[d]))))
 # print(g[0].shape)
 # print(g[1].shape)
 # print(g[2].shape)
 g1 = np.transpose(g[0], [1, 2, 0])
+g1 = np.squeeze(g1)
+# print(g1.shape)
 g2 = g[1]
-g3 = np.transpose(g[d])
+# print(g2.shape)
+g3 = np.transpose(g[d-1])
+g3 = np.squeeze(g3)
+# print(g3.shape)
+
+i = ty.tenalg.mode_dot(g2, g3, 2)
+print(g1.shape, i.shape)
+
