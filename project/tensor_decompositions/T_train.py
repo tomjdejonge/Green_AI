@@ -3,70 +3,71 @@ from scipy import linalg
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-
-
-# Tensor Train Decomposition
-def tt_decomposition(img, epsilon=0.5):
+ ## ucidatasets
+def tt_decomposition(img, epsilon=0.01):
     # Load the image and convert image to correct numpy array
     img = Image.open(img)
     x = np.asarray(img)
+    # print(x)
     print(f'The shape of the original image is: {x.shape}')
-    x = np.reshape(x, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-    print('The shape of the initially reshaped image is:', x.shape)
-    # Define order, row_dims, col_dims, ranks and cores
-    order = len(x.shape) // 2
-    row_dims = x.shape[:order]
-    col_dims = x.shape[order:]
-    ranks = [1] * (order + 1)
-    cores = []
-    terror = 0
-    delta = epsilon / (np.sqrt(order*2)) * linalg.norm(x)
-    print(f'delta = {delta}')
-    # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
-    p = [order * j + i for i in range(order) for j in range(2)]
+    C = x
+    print('The shape of the initially reshaped image is:', C.shape)
+    n = C.shape
+    print(n)
+    d = 3
+    cores = [0] * (d)
+    delta1 = epsilon / (np.sqrt(d-1)) * np.linalg.norm(x)
+    delta =  epsilon / (np.sqrt(d-1)) * fro(x)
+    delta2 = epsilon / (np.sqrt(d-1)) * frob(x)
+    # print(f' delta = {delta}, delta1 = {delta1} , delta2 = {delta2}')
+    r = [0] * (d+1)
+    r[0] = 1
 
-    print(f'p= {p}, zelf = {p[:3]}')
-    y = np.transpose(x, p).copy()
 
-    # decompose the full tensor
-    for i in range(order - 1):
-        # reshape residual tensor
-        m = ranks[i] * row_dims[i] * col_dims[i]            #r_(k-1)*n_k
-        n = int((torch.numel(torch.from_numpy(y))  /m))     # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
-        y = np.reshape(y, [m, n])
+    for i in range(d-1):
+        m = int(r[i] * n[i])                                   # r_(k-1)*n_k
+        b = int(C.size/m)                                   # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
 
-        # apply SVD in order to isolate modes
-        [u, s, v] = svd(y)                                  #svd
-        rk = 1
-        s = np.diag(s)
+        C = np.reshape(C, [m, b])
+        terror = 0
+
+        [u, s, v] = linalg.svd(C, full_matrices=False)          #(u @ np.diag(s) @ v).astype(int)
+
+        rk = 0
+
         error = linalg.norm((s[rk+1:]))
-        print(f'error {i} = {error}')
-        while error > delta:
-            rk += 1
-            error = linalg.norm(s[rk+1:])
+        print(f'{i,u.shape,s.shape,v.shape}')
+        if epsilon != 0:
+            while error > delta:
+                rk +=1
+                error = linalg.norm(s[rk+1:])
+            # print(f'error = {error}')
+            print(f'r{i} = {r}')
+        else:
+            rk = 0
+        s = np.diag(s)
+        r[i+1] = rk
+        terror += error ** 2
+        # cores.append(np.reshpa)
+        cores[i] = (np.reshape(u[:,:r[i+1]], [r[i], n[i], r[i + 1]]))
 
-        terror = terror + error**2
-        print(f'rk = {rk}')
-        # define new TT core
-        ranks[i + 1] = u.shape[1]
-        cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
+        C = (s[:r[i+1],:r[i+1]])@(v[:r[i+1],:])
 
-        # print(f'{s[1:rk,1:rk].info}')
 
-        # set new residual tensor
-        # y = s.dot(v)            # S * V^T
-        y = (s[1:rk,1:rk]).dot(np.transpose(v[:,1:rk]))
-
-    # define last TT core
-    cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
-    print(len(cores))
+    cores[-1] = (np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
+    rerror = np.sqrt(terror)/np.linalg.norm(x)
+    # print(f'cores = {np.linalg.norm(cores[0])}, original tensor = {np.linalg.norm(x)}')
+    for i in range(d):
+        print(i, np.linalg.norm(cores[i]), np.linalg.norm(x))
+    print(cores[1])
+    # print('coress=',cores[-7])
     print("\n"
           "Tensor train created with order    = {d}, \n"
           "                  row_dims = {m}, \n"
           "                  col_dims = {n}, \n"
           "                  ranks    = {r}  \n"
-          "                  terror   = {t}"    .format(d=order, m=row_dims, n=col_dims, r=ranks, t=terror))
-    return cores, row_dims, col_dims, ranks, order
+          "                  relative error   = {t}"    .format(d=d, m=n, n=n, r=r, t=rerror))
+    return cores, n, r, d, C
 
 
 # Single Value Decomposition
@@ -74,52 +75,30 @@ def svd(x):
     u, s, v = linalg.svd(x, full_matrices=False)
     return u, s, v
 
+def fro(x):
+    count = 0
+    res = 0
+    for i in range(len(x)):
+        for j in range(len(x)):
+            for k in range(3):
+                res += pow(x[i][j][k], 2)
+                count += 1
+    return round(np.sqrt(res),4)
+
+def frob(tensor):
+    tensor = tensor.flatten()
+    return np.sqrt(np.matmul(tensor.transpose(), tensor))
 
 dog_tensor = tt_decomposition('dog.jpg')
-cores, row_dims, col_dims, ranks, order = dog_tensor
+cores, n, r, d, C = dog_tensor
 
-
-# Tensor Train Reconstruction 1
-def tt_reconstruction_1(cores, row_dims, col_dims, ranks, order):
-    tt_mat = cores[0].reshape(row_dims[0], col_dims[0], ranks[1])
-
-    for i in range(1, order):
-        # contract tt_mat with next TT core, permute and reshape
-        tt_mat = np.tensordot(tt_mat, cores[i], axes=(2, 0))
-        tt_mat = tt_mat.transpose([0, 2, 1, 3, 4]).reshape((np.prod(row_dims[:i + 1]),
-                                                            np.prod(col_dims[:i + 1]), ranks[i + 1]))
-
-    # reshape into vector or matrix
-    m = np.prod(row_dims)
-    n = np.prod(col_dims)
-    if n == 1:
-        tt_mat = tt_mat.reshape(m)
-    else:
-        tt_mat = tt_mat.reshape(m, n)
-
-    return tt_mat
 
 # Tensor Train Reconstruction 2
-def tt_reconstruction_2(cores, row_dims, col_dims, ranks, order):
-    if ranks[0] != 1 or ranks[-1] != 1:
-        raise ValueError("The first and last rank have to be 1!")
+def tt_reconstruction_2(cores, n, r, d, C):
 
         # reshape first core
-    full_tensor = cores[0].reshape(row_dims[0] * col_dims[0], ranks[1])
 
-    for i in range(1, order):
-        # contract full_tensor with next TT core and reshape
-        full_tensor = full_tensor.dot(cores[i].reshape(ranks[i],
-                                                            row_dims[i] * col_dims[i] * ranks[i + 1]))
-        full_tensor = full_tensor.reshape(np.prod(row_dims[:i + 1]) * np.prod(col_dims[:i + 1]), ranks[i + 1])
-
-    # reshape and transpose full_tensor
-    p = [None] * 2 * order
-    p[::2] = row_dims
-    p[1::2] = col_dims
-    q = [2 * i for i in range(order)] + [1 + 2 * i for i in range(order)]
-    full_tensor = full_tensor.reshape(p).transpose(q)
-
+    full_tensor = []
     return full_tensor
 
 def compare(image1, image2):
@@ -146,11 +125,13 @@ def pixelcount(img):
 
     return count
 
-reconstructed_dog = tt_reconstruction_2(cores, row_dims, col_dims, ranks, order)
+reconstructed_dog = tt_reconstruction_2(cores, n,r,d, C)
+
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
-reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
+reshaped_dog = np.reshape(reconstructed_dog, (512, 512))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
 old_image = Image.open('dog.jpg')
+
 
 # print(f'Pixels in new image {pixelcount(new_image)}')
 # print(f'Pixels in old image {pixelcount(old_image)}')
@@ -159,13 +140,26 @@ old_image = Image.open('dog.jpg')
 
 # compare(old_image,new_image)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
-reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
+reshaped_dog = np.reshape(reconstructed_dog*255, (512, 512))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
 old_image = Image.open('dog.jpg')
+
+# print(reshaped_dog)
 
 print(f'Pixels in new image {pixelcount(new_image)}')
 print(f'Pixels in old image {pixelcount(old_image)}')
 
 are_images_equal(new_image, old_image)
-
 compare(old_image,new_image)
+
+"""
+sitek(tt,k), d:#cores -1
+    for i = d:-1:k+1
+    C = tt[i]
+    C = mode 1 unfold (C)
+    [Q,R] = qr(np.transpose(C)
+    tt[i] = np.reshape(Q}
+    tt[i-1] mode3product(tt[i-1],R)
+
+mode 2 permute before reshape
+"""

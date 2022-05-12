@@ -11,10 +11,11 @@ def tt_decomposition(img, epsilon=0.01):
     # print(x)
     print(f'The shape of the original image is: {x.shape}')
     C = np.reshape(x, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+    C1 = C
     print('The shape of the initially reshaped image is:', C.shape)
     n = [4, 4, 4, 4, 4, 4, 4, 4, 4, 3]
     d = np.ndim(C)
-    cores = []
+    cores = [0] * (d)
     delta1 = epsilon / (np.sqrt(d-1)) * np.linalg.norm(x)
     delta =  epsilon / (np.sqrt(d-1)) * fro(x)
     delta2 = epsilon / (np.sqrt(d-1)) * frob(x)
@@ -47,16 +48,21 @@ def tt_decomposition(img, epsilon=0.01):
         r[i+1] = rk
         terror += error ** 2
         # cores.append(np.reshpa)
-        cores.append(np.reshape(u[:,:r[i+1]], [r[i], n[i], r[i + 1]]))
-        print(f's{i} = {s[0:r[i+1],0:r[i+1]]}')
-        print(f'v{i} = {v[:,0:r[i+1]]}')
-        # print(f'indices = {r[i+1]}')
-        print(f'{i, s[:r[i+1],:r[i+1]].shape, (v[:r[i+1],:]).shape}')
+        cores[i] = (np.reshape(u[:,:r[i+1]], [r[i], n[i], r[i + 1]]))
+        # print(f's{i} = {s[0:r[i+1],0:r[i+1]]}')
+        # print(f'v{i} = {v[:,0:r[i+1]]}')
+        # # print(f'indices = {r[i+1]}')
+        # print(f'{i, s[:r[i+1],:r[i+1]].shape, (v[:r[i+1],:]).shape}')
         C = (s[:r[i+1],:r[i+1]])@(v[:r[i+1],:])
 
-    cores.append(np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
-    rerror = np.sqrt(terror)/np.linalg.norm(x)
 
+    cores[-1] = (np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
+    rerror = np.sqrt(terror)/np.linalg.norm(x)
+    # print(f'cores = {np.linalg.norm(cores[0])}, original tensor = {np.linalg.norm(x)}')
+    for i in range(d):
+        print(i, np.linalg.norm(cores[i]))
+    print(fro(x))
+    # print('coress=',cores[-7])
     print("\n"
           "Tensor train created with order    = {d}, \n"
           "                  row_dims = {m}, \n"
@@ -94,15 +100,15 @@ def tt_reconstruction_2(cores, n, r, d):
 
         # reshape first core
     full_tensor = cores[0].reshape(n[0], r[1])
+
     # print(f'd={d}')
-    for i in range(1, d-1):
+    for i in range(1, (d//2)+2):
         # contract full_tensor with next TT core and reshape
         full_tensor = full_tensor.dot(cores[i].reshape(r[i], n[i] * r[i+1]))
         full_tensor = full_tensor.reshape((np.prod(n[:i + 1])), r[i+1])
 
-    # reshape and transpose full_tensor
-    q = [2 * i for i in range(d//2)] + [1 + 2 * i for i in range(d//2)]
-    # print(q)
+    print(f'n = {n[:-1]}')
+    q = [2 * i for i in range(d//2)]
     full_tensor = full_tensor.reshape(n).transpose(q)
 
     return full_tensor
@@ -132,10 +138,12 @@ def pixelcount(img):
     return count
 
 reconstructed_dog = tt_reconstruction_2(cores, n,r,d)
+
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
-reshaped_dog = np.reshape(reconstructed_dog, (512, 512, 3))
+reshaped_dog = np.reshape(reconstructed_dog, (512, 512))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
 old_image = Image.open('dog.jpg')
+
 
 # print(f'Pixels in new image {pixelcount(new_image)}')
 # print(f'Pixels in old image {pixelcount(old_image)}')
@@ -144,7 +152,7 @@ old_image = Image.open('dog.jpg')
 
 # compare(old_image,new_image)
 print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
-reshaped_dog = np.reshape(reconstructed_dog*1000, (512, 512, 3))
+reshaped_dog = np.reshape(reconstructed_dog*255, (512, 512))
 new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
 old_image = Image.open('dog.jpg')
 
@@ -167,3 +175,73 @@ sitek(tt,k), d:#cores -1
 
 mode 2 permute before reshape
 """
+from PIL import Image
+from scipy import linalg
+import numpy as np
+import torch
+# import matplotlib.pyplot as plt
+
+
+img = Image.open('dog.jpg')
+p = np.asarray(img)
+a = p
+
+d = 3
+r0 = 1
+r3 = r0
+epsilon = 0.2
+delta = (epsilon / np.sqrt(d-1)) * np.linalg.norm(a)
+
+n = a.shape
+r = np.zeros(d+1)
+r[0] = r0
+r[d] = r3
+g = []
+
+c = a
+
+for k in range(d-1):
+    m = int(r[k] * n[k])  # r_(k-1)*n_k
+    b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
+    c = np.reshape(c, [m, b])
+    # print(c.shape)
+    [U, S, V] = linalg.svd(c, full_matrices=False)
+    V = V.transpose()
+    s = np.diag(S)
+    rank = 0
+    # print(S[rank])
+    error = np.linalg.norm(s[rank])
+    # print(error)
+    while error > delta:
+        rank += 1
+        error = np.linalg.norm(s[rank+1:])
+    r[k+1] = rank + 1
+    # print(int(r[k+1]))
+    # print(int(n[k]))
+    # print(int(r[k]))
+    # print((U[:, :int(r[k+1])]).shape)
+    g.append(np.reshape(U[:, :int(r[k+1])], [int(r[k]), int(n[k]), int(r[k+1])]))
+    # print(np.linalg.norm(g[k]))
+    # print(S.shape)
+    p_1 = s[:int(r[k + 1]), :int(r[k + 1])]
+    # print(p_1)
+    p_2 = V[:, :int(r[k + 1])]
+    # print(p_2)
+    c = p_1 @ p_2.transpose()
+    print(c.shape)
+print(len(g))
+g.append(np.reshape(c, [int(r[2]), int(n[2]),int(r[3])]))
+print(g[2])
+G1 = np.moveaxis(g[0],[0,1,2],[1,2,0])
+# print(g[0].shape)
+# print(g[1].shape)
+# print(g[2].shape)
+G2 = g[1]
+
+G3 = g[2].transpose()
+
+print(G1.shape, G2.shape, G3.shape)
+I = np.tensordot(G2,G3,3)
+Y = np.matmul(I,G3)
+
+print(Y.shape)
