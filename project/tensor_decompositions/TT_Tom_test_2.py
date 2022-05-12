@@ -51,7 +51,7 @@ for k in range(d-1):
     print(p_2)
     c = p_1 @ p_2.transpose()
     # print(c.shape)
-g.append(np.reshape(c, (r[d], n[d], r[d+1])))
+g.append(np.reshape(c, (r[d-1], n[d-1], r[d])))
 # print(g[0].shape)
 # print(g[1].shape)
 # print(g[2].shape)
