@@ -69,6 +69,23 @@ g3 = np.transpose(g[d-1])
 g3 = np.squeeze(g3)
 # print(g3.shape)
 
+# g1 = np.moveaxis(g[0],[0,1,2],[1,2,0])
+# g2 = g[1]
+# g3 = g[2].transpose()
+
+# print(g1.shape, g2.shape, g3.shape)
+
+# I = np.tensordot(g2, g3, 3)
+# B = np.matmul(I, g3)
+
 i = ty.tenalg.mode_dot(g2, g3, 2)
+
 print(g1.shape, i.shape)
+
+B = [[], [], []]
+for x in range(3):
+    B[:, :, x] = np.matmul()
+
+# print(I.shape, B.shape)
+
 
