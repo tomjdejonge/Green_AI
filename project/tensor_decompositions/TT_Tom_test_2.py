@@ -79,12 +79,13 @@ g3 = np.squeeze(g3)
 # B = np.matmul(I, g3)
 
 i = ty.tenalg.mode_dot(g2, g3, 2)
-
 print(g1.shape, i.shape)
 
-B = [[], [], []]
-for x in range(3):
-    B[:, :, x] = np.matmul()
+y = np.dot(g1, i)
+
+# B = [[], [], []]
+# for x in range(3):
+#     B[:, :, x] = np.matmul(g1, i[:, :, x])
 
 # print(I.shape, B.shape)
 
