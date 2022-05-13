@@ -53,6 +53,7 @@ def tt_reconstruction(g, d):
     g3 = np.transpose(g[d-1])
     g3 = np.squeeze(g3)
     x = ty.tenalg.mode_dot(g2, g3, 2)
+    print(x.shape)
 
     B = []
     for i in range(0,3):
@@ -67,12 +68,12 @@ def tt_reconstruction(g, d):
     return B
 
 img = Image.open('dog.jpg')
-img2 = Image.open('baboon.png')
-core, d = tensortrain(img2)
+# img2 = Image.open('baboon.png')
+core, d = tensortrain(img)
 B = tt_reconstruction(core, d)
 
 new_image = Image.fromarray((B).astype(np.uint8))
-old_image = img2
+old_image = img
 
 def compare(image1, image2):
     f = plt.figure()
