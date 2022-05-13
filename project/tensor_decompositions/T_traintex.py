@@ -18,7 +18,7 @@ def tensortrain(img, d = 3, epsilon = 0.2):
         m = int(r[k] * n[k])  # r_(k-1)*n_k
         b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
 
-        c = np.reshape(c, [m, b], order="F")
+        c = np.reshape(c, [m, b])
         [U, S, V] = linalg.svd(c, full_matrices=False)
         V = V.transpose()
         S = np.diag(S)
@@ -85,4 +85,4 @@ def compare(image1, image2):
     plt.axis('off')
     plt.show(block=True)
 
-compare(old_image, new_image)
+# compare(old_image, new_image)

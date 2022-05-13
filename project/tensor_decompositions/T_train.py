@@ -1,165 +1,283 @@
 from PIL import Image
-from scipy import linalg
+import time as _time
 import numpy as np
+from scipy import linalg
 import matplotlib.pyplot as plt
-import torch
- ## ucidatasets
-def tt_decomposition(img, epsilon=0.01):
-    # Load the image and convert image to correct numpy array
-    img = Image.open(img)
-    x = np.asarray(img)
-    # print(x)
-    print(f'The shape of the original image is: {x.shape}')
-    C = x
-    print('The shape of the initially reshaped image is:', C.shape)
-    n = C.shape
-    print(n)
-    d = 3
-    cores = [0] * (d)
-    delta1 = epsilon / (np.sqrt(d-1)) * np.linalg.norm(x)
-    delta =  epsilon / (np.sqrt(d-1)) * fro(x)
-    delta2 = epsilon / (np.sqrt(d-1)) * frob(x)
-    # print(f' delta = {delta}, delta1 = {delta1} , delta2 = {delta2}')
-    r = [0] * (d+1)
-    r[0] = 1
 
 
-    for i in range(d-1):
-        m = int(r[i] * n[i])                                   # r_(k-1)*n_k
-        b = int(C.size/m)                                   # numel(C)/r_(k-1)*n_k    or  n = row_dims[i + 1:]) * np.prod(col_dims[i + 1:]
+class TT(object):
+    """
+    Tensor train class
+    Tensor trains [1]_ are defined in terms of different attributes. That is, a tensor train with order ``d`` is 
+    given by a list of 4-dimensional tensors
+        ``[cores[0] , ..., cores[d-1]]``,
+    where ``cores[i]`` is an ndarry with dimensions
+        ``ranks[i] x row_dims[i] x col_dims[i] x ranks[i+1]``.
+    There is no distinguish between tensor trains and tensor trains operators, i.e. a classical tensor train is 
+    represented by cores with column dimensions equal to 1.
+    An instance of the tensor train class can be initialized either from a list of cores, i.e. ``t = TT(cores)`` 
+    where ``cores`` is a list as described above, or from a full tensor representation, i.e. ``t = TT(x)`` where 
+    ``x`` is an ndarray with dimensions 
+        ``row_dims[0] x ... x row_dims[-1] x col_dims[0] x ... x col_dims[-1]``.
+    In the latter case, the tensor is decomposed into the TT format. For more information on the implemented tensor
+    operations, we refer to [2]_.
+    Attributes
+    ----------
+    order : int
+        order of the tensor train
+    row_dims : list[int]
+        list of the row dimensions of the tensor train
+    col_dims : list[int]
+        list of the column dimensions of the tensor train
+    ranks : list[int]
+        list of the ranks of the tensor train
+    cores : list[np.ndarray]
+        list of the cores of the tensor train
+    Methods
+    -------
+    print(t)
+        string representation of tensor trains
+    +
+        sum of two tensor trains
+    -
+        difference of two tensor trains
+    *
+        multiplication of tensor trains and scalars
+    @/dot(t,u)
+        multiplication of two tensor trains
+    tensordot
+        index contraction between two tensortrains
+    rank_tensordot
+        index contraction between TT and matrix along the rank-dimension
+    concatenate
+        concatenate cores of two TT
+    transpose(t)
+        transpose of a tensor train
+    rank_transpose
+        rank-transpose of a tensor train
+    conj
+        complex conjugate of a tensor train
+    isoperator(t)
+        check is given tensor train is an operator
+    copy(t)
+        deep copy of a tensor train
+    element(t, indices)
+        element of t at given indices
+    full(t)
+        convert tensor train to full format
+    matricize(t)
+        matricization of a tensor train
+    ortho_left(t)
+        left-orthonormalization of a tensor train
+    ortho_right(t)
+        right-orthonormalization of a tensor train
+    ortho(t)
+        left- and right-orthonormalization of a tensor train
+    norm(t)
+        norm of a tensor train
+    tt2qtt
+        conversion from TT format into QTT format
+    qtt2tt
+        conversion from QTT format into TT format
+    svd
+        Computation of a global SVD of a tensor train
+    pinv
+        Computation of the pseudoinverse of a tensor train
+    References
+    ----------
+    .. [1] I. V. Oseledets, "Tensor-Train Decomposition", SIAM Journal on Scientific Computing 33 (5), 2011
+    .. [2] P. Gelß. "The Tensor-Train Format and Its Applications: Modeling and Analysis of Chemical Reaction
+           Networks, Catalytic Processes, Fluid Flows, and Brownian Dynamics", Freie Universität Berlin, 2017
 
-        C = np.reshape(C, [m, b])
-        terror = 0
+    Examples
+    --------
+    Construct tensor train from list of cores:
+    >>> import numpy as np
 
-        [u, s, v] = linalg.svd(C, full_matrices=False)          #(u @ np.diag(s) @ v).astype(int)
+    >>>
+    >>> cores = [np.random.rand([1, 2, 3, 4]), np.random.rand([4, 3, 2, 1])]
+    >>> t = TT(cores)
+    >>> print(t)
+    >>> ...
+    Construct tensor train from ndarray:
+    >>> import numpy as np
 
-        rk = 0
+    >>>
+    >>> x = np.random.rand([1, 2, 3, 4, 5, 6])
+    >>> t = TT(cores)
+    >>> print(t)
+    >>> ...
+    """
 
-        error = linalg.norm((s[rk+1:]))
-        print(f'{i,u.shape,s.shape,v.shape}')
-        if epsilon != 0:
-            while error > delta:
-                rk +=1
-                error = linalg.norm(s[rk+1:])
-            # print(f'error = {error}')
-            print(f'r{i} = {r}')
+    def __init__(self, x, threshold=0, max_rank=np.infty, progress=False, string=None):
+        """
+        Parameters
+        ----------
+        x : list[np.ndarray] or np.ndarray
+            either a list[TT] cores or a full tensor
+        threshold : float, optional
+            threshold for reduced SVD decompositions, default is 0
+        max_rank : int, optional
+            maximum rank of the left-orthonormalized tensor train, default is np.infty
+        Raises
+        ------
+        TypeError
+            if x is neither a list of ndarray nor a single ndarray
+        ValueError
+            if list elements of x are not 4-dimensional tensors or shapes do not match
+        ValueError
+            if number of dimensions of the ndarray x is not a multiple of 2
+        """
+
+        # initialize from list of cores
+        if isinstance(x, list):
+
+            # check if orders of list elements are correct
+            if np.all([x[i].ndim == 4 for i in range(len(x))]):
+
+                # check if ranks are correct
+                if np.all([x[i].shape[3] == x[i + 1].shape[0] for i in range(len(x) - 1)]):
+
+                    # define order, row dimensions, column dimensions, ranks, and cores
+                    self.order = len(x)
+                    self.row_dims = [x[i].shape[1] for i in range(self.order)]
+                    self.col_dims = [x[i].shape[2] for i in range(self.order)]
+                    self.ranks = [x[i].shape[0] for i in range(self.order)] + [x[-1].shape[3]]
+                    self.cores = x
+
+                    # rank reduction
+                    if threshold != 0 or max_rank != np.infty:
+                        self.ortho(threshold=threshold, max_rank=max_rank)
+
+                else:
+                    raise ValueError('Shapes of list elements do not match.')
+
+            else:
+                raise ValueError('List elements must be 4-dimensional arrays.')
+
+        # initialize from full array   
+        elif isinstance(x, np.ndarray):
+
+            # check if order of ndarray is a multiple of 2
+            if np.mod(x.ndim, 2) == 0:
+
+                # show progress
+                if string is None:
+                    string = 'HOSVD'
+
+
+                # define order, row dimensions, column dimensions, ranks, and cores
+                order = len(x.shape) // 2
+                row_dims = x.shape[:order]
+                col_dims = x.shape[order:]
+                ranks = [1] * (order + 1)
+                cores = []
+
+                # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
+                p = [order * j + i for i in range(order) for j in range(2)]
+                y = np.transpose(x, p).copy()
+
+                # decompose the full tensor
+                for i in range(order - 1):
+                    # reshape residual tensor
+                    m = ranks[i] * row_dims[i] * col_dims[i]
+                    n = np.prod(row_dims[i + 1:]) * np.prod(col_dims[i + 1:])
+                    y = np.reshape(y, [m, n])
+
+                    # apply SVD in order to isolate modes
+                    [u, s, v] = linalg.svd(y, full_matrices=False)
+
+                    # rank reduction
+                    if threshold != 0:
+                        indices = np.where(s / s[0] > threshold)[0]
+                        u = u[:, indices]
+                        s = s[indices]
+                        v = v[indices, :]
+                    if max_rank != np.infty:
+                        u = u[:, :np.minimum(u.shape[1], max_rank)]
+                        s = s[:np.minimum(s.shape[0], max_rank)]
+                        v = v[:np.minimum(v.shape[0], max_rank), :]
+
+                    # define new TT core
+                    ranks[i + 1] = u.shape[1]
+                    cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
+
+                    # set new residual tensor
+                    y = np.diag(s).dot(v)
+
+                # define last TT core
+                cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
+
+                # initialize tensor train
+                self.__init__(cores)
+
+
+            else:
+                raise ValueError('Number of dimensions must be a multiple of 2.')
+
         else:
-            rk = 0
-        s = np.diag(s)
-        r[i+1] = rk
-        terror += error ** 2
-        # cores.append(np.reshpa)
-        cores[i] = (np.reshape(u[:,:r[i+1]], [r[i], n[i], r[i + 1]]))
+            raise TypeError('Parameter must be either a list of cores or an ndarray.')
 
-        C = (s[:r[i+1],:r[i+1]])@(v[:r[i+1],:])
+    def __repr__(self):
+        """
+        String representation of tensor trains
+        Print the attributes of a given tensor train.
+        """
 
+        return ('\n'
+                'Tensor train with order    = {d}, \n'
+                '                  row_dims = {m}, \n'
+                '                  col_dims = {n}, \n'
+                '                  ranks    = {r}'.format(d=self.order, m=self.row_dims, n=self.col_dims, r=self.ranks))
 
-    cores[-1] = (np.reshape(C, [r[-1], n[-1], 1]))       #C, [r[-2], n[-1], n[-1], 1]))
-    rerror = np.sqrt(terror)/np.linalg.norm(x)
-    # print(f'cores = {np.linalg.norm(cores[0])}, original tensor = {np.linalg.norm(x)}')
-    for i in range(d):
-        print(i, np.linalg.norm(cores[i]), np.linalg.norm(x))
-    print(cores[1])
-    # print('coress=',cores[-7])
-    print("\n"
-          "Tensor train created with order    = {d}, \n"
-          "                  row_dims = {m}, \n"
-          "                  col_dims = {n}, \n"
-          "                  ranks    = {r}  \n"
-          "                  relative error   = {t}"    .format(d=d, m=n, n=n, r=r, t=rerror))
-    return cores, n, r, d, C
-
-
-# Single Value Decomposition
-def svd(x):
-    u, s, v = linalg.svd(x, full_matrices=False)
-    return u, s, v
-
-def fro(x):
-    count = 0
-    res = 0
-    for i in range(len(x)):
-        for j in range(len(x)):
-            for k in range(3):
-                res += pow(x[i][j][k], 2)
-                count += 1
-    return round(np.sqrt(res),4)
-
-def frob(tensor):
-    tensor = tensor.flatten()
-    return np.sqrt(np.matmul(tensor.transpose(), tensor))
-
-dog_tensor = tt_decomposition('dog.jpg')
-cores, n, r, d, C = dog_tensor
-
-
-# Tensor Train Reconstruction 2
-def tt_reconstruction_2(cores, n, r, d, C):
+    def full(self):
+        """
+        Conversion to full format.
+        Returns
+        -------
+        full_tensor : np.ndarray
+            full tensor representation of self (dimensions: m_1 x ... x m_d x n_1 x ... x n_d)
+        """
+        if self.ranks[0] != 1 or self.ranks[-1] != 1:
+            raise ValueError("The first and last rank have to be 1!")
 
         # reshape first core
+        full_tensor = self.cores[0].reshape(self.row_dims[0] * self.col_dims[0], self.ranks[1])
 
-    full_tensor = []
-    return full_tensor
+        for i in range(1, self.order):
+            # contract full_tensor with next TT core and reshape
+            full_tensor = full_tensor.dot(self.cores[i].reshape(self.ranks[i],
+                                                                self.row_dims[i] * self.col_dims[i] * self.ranks[
+                                                                    i + 1]))
+            full_tensor = full_tensor.reshape(np.prod(self.row_dims[:i + 1]) * np.prod(self.col_dims[:i + 1]),
+                                              self.ranks[i + 1])
+
+        # reshape and transpose full_tensor
+        p = [None] * 2 * self.order
+        p[::2] = self.row_dims
+        p[1::2] = self.col_dims
+        q = [2 * i for i in range(self.order)] + [1 + 2 * i for i in range(self.order)]
+        full_tensor = full_tensor.reshape(p).transpose(q)
+
+        return full_tensor
+
+
+img = np.array(Image.open('dog.jpg'))
+img1 = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+a = TT.full(TT(img1,threshold=0.1))
+reshaped_dog = np.reshape(a, (512, 512, 3))
+new_image = Image.fromarray(reshaped_dog.astype(np.uint8))
+print(reshaped_dog.shape)
+old_image = img
 
 def compare(image1, image2):
     f = plt.figure()
-    f.add_subplot(1,2, 1)
-    plt.imshow(image1,interpolation='nearest')
+    f.add_subplot(1,2,1)
+    plt.imshow(image1)
     plt.axis('off')
-    f.add_subplot(1,2, 2)
-    plt.imshow(image2,interpolation='nearest')
+    f.add_subplot(1,2,2)
+    plt.imshow(image2)
     plt.axis('off')
     plt.show(block=True)
 
-def are_images_equal(im1, im2):
-    if list(im1.getdata()) == list(im2.getdata()):
-        print("\nThe images are identical")
-    else:
-        print("\nThe images are different")
-
-def pixelcount(img):
-    count = 0
-    for y in range(img.height):
-        for x in range(img.width):
-            count += 1
-
-    return count
-
-reconstructed_dog = tt_reconstruction_2(cores, n,r,d, C)
-
-print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
-reshaped_dog = np.reshape(reconstructed_dog, (512, 512))
-new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
-old_image = Image.open('dog.jpg')
-
-
-# print(f'Pixels in new image {pixelcount(new_image)}')
-# print(f'Pixels in old image {pixelcount(old_image)}')
-
-# are_images_equal(new_image, old_image)
-
-# compare(old_image,new_image)
-print(f'\nThe shape of the reconstructed tensor is: {reconstructed_dog.shape}')
-reshaped_dog = np.reshape(reconstructed_dog*255, (512, 512))
-new_image = Image.fromarray((reshaped_dog).astype(np.uint8))
-old_image = Image.open('dog.jpg')
-
-# print(reshaped_dog)
-
-print(f'Pixels in new image {pixelcount(new_image)}')
-print(f'Pixels in old image {pixelcount(old_image)}')
-
-are_images_equal(new_image, old_image)
-compare(old_image,new_image)
-
-"""
-sitek(tt,k), d:#cores -1
-    for i = d:-1:k+1
-    C = tt[i]
-    C = mode 1 unfold (C)
-    [Q,R] = qr(np.transpose(C)
-    tt[i] = np.reshape(Q}
-    tt[i-1] mode3product(tt[i-1],R)
-
-mode 2 permute before reshape
-"""
+compare(old_image, new_image)

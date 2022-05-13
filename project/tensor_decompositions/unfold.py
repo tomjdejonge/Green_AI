@@ -7,16 +7,19 @@ import tensorly as ty
 
 img = Image.open('dog.jpg')
 img2 = Image.open('baboon.png')
-core, d = tensortrain(img2)
+core, d = tensortrain(img)
 B = tt_reconstruction(core, d)
 
 def unfold(tensor, n):
-    x = range(len(tensor)+1)
-
+    print(tensor[0].shape, tensor[1].shape, tensor[2].shape)
+    tensor = np.array([tensor[0], tensor[1], tensor[2]])
+    x = tensor.shape
+    x =
+    print('aa' ,tensor.shape)
     if n ==2:
         tensor = np.pagetranspose(np.transpose(tensor,2,1,0))
     elif n == 3:
-        tensor = [tensor[2], tensor[0], tensor[1]]
+        tensor = np.transpose(tensor, [2,0,1])   #[tensor[2], tensor[0], tensor[1]]
     return np.reshape(tensor,x[n],[])
 
 print(unfold(core, d))
