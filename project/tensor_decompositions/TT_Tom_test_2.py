@@ -26,12 +26,22 @@ c = a
 for k in range(d-1):
     m = int(r[k] * n[k])  # r_(k-1)*n_k
     b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
-    c = np.reshape(c, [m, b])
-    # print(c.shape)
+    # print(m)
+    # print(b)
+    c = np.reshape(c, [m, b], order="F")
+    # print('c = ', c[-5:])
     [U, S, V] = linalg.svd(c, full_matrices=False)
     V = V.transpose()
-    # print(V)
-    s = np.diag(S)
+    S = np.diag(S)
+    s = np.diagonal(S)
+    s = np.reshape(s, (s.shape[0], 1))
+    # print(s.shape)
+    # print(s)
+    # print('s = ', s.shape)
+    # print('U = ', U.shape)
+    # print('S = ', S.shape)
+    # print('V = ', V.shape)
+
     rank = 0
     # print(S[rank])
     error = np.linalg.norm(s[rank])
@@ -47,10 +57,10 @@ for k in range(d-1):
     g.append(np.reshape(U[:, :int(r[k+1])], [int(r[k]), int(n[k]), int(r[k+1])]))
     # print(np.linalg.norm(g[k]))
     # print(S.shape)
-    p_1 = s[:int(r[k + 1]), :int(r[k + 1])]
-    # print(p_1)
+    p_1 = S[:int(r[k + 1]), :int(r[k + 1])]
+    # print(p_1.shape)
     p_2 = V[:, :int(r[k + 1])]
-    # print(p_2)
+    # print(p_2.shape)
     c = p_1 @ p_2.transpose()
     # print(c)
 # print(r[d-1])
@@ -62,31 +72,23 @@ g.append(np.reshape(c, (int(r[d-1]), int(n[d-1]), int(r[d]))))
 # print(g[2].shape)
 g1 = np.transpose(g[0], [1, 2, 0])
 g1 = np.squeeze(g1)
-# print(g1.shape)
 g2 = g[1]
-# print(g2.shape)
 g3 = np.transpose(g[d-1])
 g3 = np.squeeze(g3)
-# print(g3.shape)
-
-# g1 = np.moveaxis(g[0],[0,1,2],[1,2,0])
-# g2 = g[1]
-# g3 = g[2].transpose()
 
 # print(g1.shape, g2.shape, g3.shape)
 
-# I = np.tensordot(g2, g3, 3)
-# B = np.matmul(I, g3)
+I = ty.tenalg.mode_dot(g2, g3, 2)
+print(I.shape)
 
-i = ty.tenalg.mode_dot(g2, g3, 2)
-print(g1.shape, i.shape)
+B = []
+for i in range(0,3):
 
-y = np.dot(g1, i)
+    res = np.matmul((I[:,:,i]),g1)
+    B.append(res)
 
-# B = [[], [], []]
-# for x in range(3):
-#     B[:, :, x] = np.matmul(g1, i[:, :, x])
+B = np.array(B)
+B = np.squeeze(B)
+B = np.transpose(B)
 
-# print(I.shape, B.shape)
-
-
+print(B.shape)
