@@ -156,6 +156,7 @@ def rearrange_2(arr):
                 res3.pop(index_1)
                 res3.pop(index_2 + 1)
                 res3.pop(index_3 + 2)
+
                 print(res3)
     return np.array(fin)
 
