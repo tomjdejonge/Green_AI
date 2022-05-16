@@ -72,32 +72,71 @@ for k in range(d-1):
 # print(n[d-1])
 # print(r[d])
 g.append(np.reshape(c, (int(r[d-1]), int(n[d-1]), int(r[d])), order="F"))
-print(g[0].transpose())
-print(g[1])
-print(g[2])
+# print(g[1])
+# print(g[2])
 g1 = np.transpose(g[0], [1, 2, 0])
 g1 = np.squeeze(g1)
+# print(g1)
+# print(g1.shape)
 g2 = g[1]
+# print(g2)
+# print(g2.shape)
 g3 = np.transpose(g[d-1])
 g3 = np.squeeze(g3)
+# print(g3)
+# print(g3.shape)
 
 # print(g3)
 # print(g3.shape)
 
+
+def rearrange(arr):
+    res = np.ndarray.tolist(arr)
+    res2 = [item for sublist in res for item in sublist]
+    fin = [[], [], []]
+    for i in range(len(res[0])):
+        i1 = res2[0]
+        i2 = res2[1]
+        i3 = res2[2]
+        fin[0].append(i1)
+        fin[1].append(i2)
+        fin[2].append(i3)
+        res2 = res2[3:]
+    return (np.array(fin))
+
+
 I = ty.tenalg.mode_dot(g2, g3, 2)
-# print(I)
+for i in range(3):
+    I[:, :, i] = rearrange(I[:, :, i])
+
+
 # print(I.shape)
 
+B = []
+for i in range(0, 3):
+    res = np.matmul(g1, (I[:, :, i]))
+    B.append(res)
 
-# B = []
-# for i in range(0, 3):
-#     res = np.matmul(g1, np.transpose(I[:, :, i]))
-#     B.append(res)
-#
-# B = np.array(B)
-# B = np.squeeze(B)
-# B = np.transpose(B)
-# print(B.shape)
+B = np.array(B)
+B = np.squeeze(B)
+B = np.transpose(B)
+
+# for i in range(3):
+#     print(np.transpose(B[:, :, i]), '\n')
+
+c = [[],[],[]]
+for i in range(3):
+    c[i] = (np.transpose(B[:, :, i]))
+c = np.array(c)
+
+# print(c)
+
+Dog = (c.astype(np.uint8))
+print(Dog)
+
+new_image = Image.fromarray(Dog)
+old_image = img
+
 
 def compare(image1, image2):
     f = plt.figure()
@@ -109,4 +148,4 @@ def compare(image1, image2):
     plt.axis('off')
     plt.show(block=True)
 
-# compare(img, img)
+compare(old_image, new_image)

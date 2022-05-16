@@ -129,7 +129,7 @@ class TT(object):
 
 img = np.array(Image.open('dog.jpg'))
 img1 = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-a = TT.full(TT(img1,threshold=0.1))
+a = TT.full(TT(img1,threshold=0.9))
 reshaped_dog = np.reshape(a, (512, 512, 3))
 new_image = Image.fromarray(reshaped_dog.astype(np.uint8))
 # print(reshaped_dog.shape)
