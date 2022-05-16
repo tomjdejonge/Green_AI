@@ -7,8 +7,11 @@ import matplotlib.pyplot as plt
 
 img = Image.open('dog.jpg_small.jpeg')
 p = np.asarray(img)
-# print(p.shape)
+
 a = p
+
+# print(p)
+# print(p.shape)
 
 d = 3
 r0 = 1
@@ -132,10 +135,33 @@ c = np.array(c)
 # print(c)
 
 Dog = (c.astype(np.uint8))
-print(Dog)
+# print(Dog)
 
-new_image = Image.fromarray(Dog)
-old_image = img
+
+def rearrange_2(arr):
+    res = np.ndarray.tolist(arr)
+    res2 = [item for sublist in res for item in sublist]
+    res3 = [item for sublist in res2 for item in sublist]
+    fin = [[[] for _ in range(8)] for _ in range(8)]
+    while len(res3) > 0:
+        for i in range(8):
+            for j in range(8):
+                i1 = res3[0]
+                i2 = res3[int(len(res3)/3)]
+                i3 = res3[int(2 * len(res3)/3)]
+                fin[i][j].append(i1)
+                fin[i][j].append(i2)
+                fin[i][j].append(i3)
+                res3.pop(0)
+                res3.pop(int((len(res3)+1)/3))
+                res3.pop(int(2 * (len(res3)+2)/3))
+                print(res3)
+    return np.array(fin)
+
+print(rearrange_2(Dog))
+
+# new_image = Image.fromarray(Dog)
+# old_image = img
 
 
 def compare(image1, image2):
@@ -148,4 +174,4 @@ def compare(image1, image2):
     plt.axis('off')
     plt.show(block=True)
 
-compare(old_image, new_image)
+# compare(old_image, new_image)
