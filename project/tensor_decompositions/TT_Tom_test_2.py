@@ -67,6 +67,8 @@ for k in range(d-1):
     p_2 = V[:, :int(r[k + 1])]
     # print(p_2)
     c = p_1 @ p_2.transpose()
+    for i in range(len(g)):
+        print(f'norm of core {i + 1} = {linalg.norm(g[i])}')
     # print(c)
 # print(r[d-1])
 # print(n[d-1])
@@ -136,7 +138,7 @@ print(Dog)
 
 new_image = Image.fromarray(Dog)
 old_image = img
-
+print(f'norm of image is {linalg.norm(img)}')
 
 def compare(image1, image2):
     f = plt.figure()

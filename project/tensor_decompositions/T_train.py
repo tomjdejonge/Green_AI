@@ -84,6 +84,8 @@ class TT(object):
                 # define last TT core
                 cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
 
+                for i in range(len(cores)):
+                    print(f'norm of core {i+1} = {linalg.norm(cores[i])}')
                 # initialize tensor train
                 self.__init__(cores)
 
@@ -129,11 +131,13 @@ class TT(object):
 
 img = np.array(Image.open('dog.jpg'))
 img1 = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-a = TT.full(TT(img1,threshold=0.9))
+a = TT.full(TT(img1,threshold=0))
 reshaped_dog = np.reshape(a, (512, 512, 3))
 new_image = Image.fromarray(reshaped_dog.astype(np.uint8))
 # print(reshaped_dog.shape)
 old_image = img
+
+print(f'norm of image is {linalg.norm(img1)}')
 
 def compare(image1, image2):
     f = plt.figure()
