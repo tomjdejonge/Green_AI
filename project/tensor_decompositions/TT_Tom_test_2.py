@@ -146,15 +146,16 @@ def rearrange_2(arr):
     while len(res3) > 0:
         for i in range(8):
             for j in range(8):
+                index_1 = 0
+                index_2 = int(len(res3) / 3)
+                index_3 = int(2 * (len(res3) / 3))
                 i1 = res3[0]
-                i2 = res3[int(len(res3)/3)]
-                i3 = res3[int(2 * len(res3)/3)]
-                fin[i][j].append(i1)
-                fin[i][j].append(i2)
-                fin[i][j].append(i3)
-                res3.pop(0)
-                res3.pop(int((len(res3)+1)/3))
-                res3.pop(int(2 * (len(res3)+2)/3))
+                fin[i][j].append(res3[index_1])
+                fin[i][j].append(res3[index_2])
+                fin[i][j].append(res3[index_3])
+                res3.pop(index_1)
+                res3.pop(index_2 + 1)
+                res3.pop(index_3 + 2)
                 print(res3)
     return np.array(fin)
 
