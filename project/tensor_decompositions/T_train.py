@@ -51,7 +51,7 @@ class TT(object):
 
                 # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
                 p = [order * j + i for i in range(order) for j in range(2)]
-                print(p)
+                # print(p)
                 y = np.transpose(x, p).copy()
 
                 # decompose the full tensor
@@ -63,7 +63,7 @@ class TT(object):
 
                     # apply SVD in order to isolate modes
                     [u, s, v] = linalg.svd(y, full_matrices=False)
-
+                    # print(y.shape)
                     # rank reduction
                     if threshold != 0:
                         indices = np.where(s / s[0] > threshold)[0]
@@ -74,19 +74,24 @@ class TT(object):
                         u = u[:, :np.minimum(u.shape[1], max_rank)]
                         s = s[:np.minimum(s.shape[0], max_rank)]
                         v = v[:np.minimum(v.shape[0], max_rank), :]
-
+                    print(u.shape[1], indices)
                     # define new TT core
                     ranks[i + 1] = u.shape[1]
                     cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
 
                     # set new residual tensor
                     y = np.diag(s).dot(v)
+                    # print(y.shape)
 
                 # define last TT core
                 cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
+                # print(cores)
 
-                for i in range(len(cores)):
-                    print(f'norm of core {i+1} = {linalg.norm(cores[i])}')
+                # print(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
+                # print(ranks[-2],'a', row_dims[-1],'a', col_dims[-1], 1)
+                # for i in range(len(cores)):
+                #     print(f'norm of core {i+1} = {linalg.norm(cores[i])}')
+                # print(f'norm of core = {linalg.norm(x)}')
                 # initialize tensor train
                 self.__init__(cores)
 
@@ -105,12 +110,12 @@ class TT(object):
                 '                  ranks    = {r}'.format(d=self.order, m=self.row_dims, n=self.col_dims, r=self.ranks))
 
     def full(self):
-        print(self.ranks)
-        print(self.col_dims)
-        print(self.row_dims)
+        # print(self.ranks)
+        # print(self.col_dims)
+        # print(self.row_dims)
         if self.ranks[0] != 1 or self.ranks[-1] != 1:
             raise ValueError("The first and last rank have to be 1!")
-
+        # print('cores = ',self.cores)
         # reshape first core
         full_tensor = self.cores[0].reshape(self.row_dims[0] * self.col_dims[0], self.ranks[1])
 
@@ -127,8 +132,11 @@ class TT(object):
         p[::2] = self.row_dims
         p[1::2] = self.col_dims
         q = [2 * i for i in range(self.order)] + [1 + 2 * i for i in range(self.order)]
+        # print(f'q = {q}')
+        # print(f'p = {p}')
+        # print(full_tensor.shape)
         full_tensor = full_tensor.reshape(p).transpose(q)
-
+        # print(full_tensor)
         return np.array(np.reshape(full_tensor, (512,512,3)))
 
 
@@ -139,10 +147,10 @@ def imshow(image):
 img_dog = np.array(Image.open('dog.jpg'))
 img_bab = np.array(Image.open('baboon.png'))
 img1 = np.reshape(img_bab, (4,4,4,4,4,4,4,4,4,3))
-
+# print(TT(img1,threshold=0.2))
 # print(f'bab = {img_bab}')
 # print(f'dog = {img_dog}')
-dog = TT.full(TT(img1,threshold=0.2))
+dog = TT.full(TT(img1,threshold=0.1))
 # print(img.info)
 # print(dog.info)
 imshow(img_bab.astype(np.uint8))
