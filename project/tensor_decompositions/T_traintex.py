@@ -43,32 +43,11 @@ def tensortrain(img, epsilon=0):
     # print(g)
     return g, d
 
-def tt_reconstruction(g, d):
-    g1 = np.transpose(g[0], [1, 2, 0])
-    g1 = np.squeeze(g1)
-    g2 = g[1]
-    g3 = np.transpose(g[d - 1])
-    g3 = np.squeeze(g3)
-    I = ty.tenalg.mode_dot(g2, g3, 2)
+def tt_reconstruction(cores, d):
 
-    B = []
-    for i in range(0, 3):
-        res = np.matmul(g1, (I[:, :, i]))
-        B.append(res)
-    B = np.array(B)
-    B = np.squeeze(B)
-    B = np.transpose(B)
-    c = [[], [], []]
-    for i in range(3):
-        c[i] = (np.transpose(B[:, :, i]))
-    c = np.array(c)
-    Dog = (c.astype(np.uint8))
-    print(Dog)
-    Dog = rearrange_2(Dog)
-    new_image = Image.fromarray(Dog.astype(np.uint8))
-    old_image = img
-    compare(old_image, new_image)
-    return B
+    for k in range(d-1):
+        cores[0] = np.matmul(cores[k], cores[k+1])
+    return cores
 
 def compare(image1, image2):
     f = plt.figure()
@@ -84,6 +63,7 @@ def compare(image1, image2):
 img = Image.open('dog.jpg')
 # img2 = Image.open('baboon.png')
 core, d = tensortrain(img)
+print(len(core))
 B = tt_reconstruction(core, d)
 
 new_image = Image.fromarray((B).astype(np.uint8))
