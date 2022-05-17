@@ -6,13 +6,19 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    img = Image.open('dog.jpg_small.jpeg')
+    original_image = Image.open('dog.jpg_small.jpeg')
+    tt, d = tt_decomposition('dog.jpg_small.jpeg')
+    reconstructed_image = reconstruction(tt, d)
+    compare(original_image, reconstructed_image)
+
+
+def tt_decomposition(tensor, epsilon=0.2):
+    img = Image.open(tensor)
     p = np.asarray(img)
     a = p
-    d = 3
+    d = len(p.shape)
     r0 = 1
     r3 = r0
-    epsilon = 0.2
     delta = (epsilon / np.sqrt(d - 1)) * np.linalg.norm(a)
     n = a.shape
     r = np.zeros(d + 1)
@@ -20,7 +26,6 @@ def main():
     r[d] = r3
     g = []
     c = a
-
     for k in range(d - 1):
         m = int(r[k] * n[k])  # r_(k-1)*n_k
         b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
@@ -41,6 +46,10 @@ def main():
         p_2 = V[:, :int(r[k + 1])]
         c = p_1 @ p_2.transpose()
     g.append(np.reshape(c, (int(r[d - 1]), int(n[d - 1]), int(r[d])), order="F"))
+    return g, d
+
+
+def reconstruction(g, d):
     g1 = np.transpose(g[0], [1, 2, 0])
     g1 = np.squeeze(g1)
     g2 = g[1]
@@ -64,9 +73,8 @@ def main():
     Dog = (c.astype(np.uint8))
     # print(Dog)
     Dog = rearrange_2(Dog)
-    new_image = Image.fromarray(Dog.astype(np.uint8))
-    old_image = img
-    compare(old_image, new_image)
+    reconstructed = Image.fromarray(Dog.astype(np.uint8))
+    return reconstructed
 
 
 def compare(image1, image2):

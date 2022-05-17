@@ -9,7 +9,7 @@ def main():
     img = Image.open('dog.jpg_small.jpeg')
     p = np.asarray(img)
     a = p
-    d = 3
+    d = len(p.shape)
     r0 = 1
     r3 = r0
     epsilon = 0.2
