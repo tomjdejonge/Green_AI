@@ -48,16 +48,16 @@ def tensortrain(img, epsilon=0):
     return g, d, r, n
 
 def tt_reconstruction(cores, d,r,n):
-    print(r)
-    r = r.astype(np.uint)
-    print(r)
-    print(n)
+    r = list(r.astype(np.uint))
+    # for i in range(len(r)):
+    #     r[i] = int(r[i])
+    print(f'r= {r}')
+    n = list(n)
     full_tensor = np.reshape(cores[0],(int(n[0]), int(r[1])))
 
     for k in range(1, d-1):
-        print(k, n[k] ,r[k + 1])
-        full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]),n[k] * r[k + 1]))
-        full_tensor = full_tensor.reshape(np.prod(int(n[:k + 1])), int(r[k + 1]))
+        full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]),int(n[k]) * int(r[k + 1])))
+        full_tensor = full_tensor.reshape(np.prod(n[:k + 1]), int(r[k + 1]))
     return cores
 
 def compare(image1, image2):
@@ -74,7 +74,7 @@ def compare(image1, image2):
 img = Image.open('dog.jpg')
 # img2 = Image.open('baboon.png')
 core, d,r, n = tensortrain(img)
-print(len(core))
+# print(len(core))
 B = tt_reconstruction(core, d,r,n)
 
 new_image = Image.fromarray((B).astype(np.uint8))
