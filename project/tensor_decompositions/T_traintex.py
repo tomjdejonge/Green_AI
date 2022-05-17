@@ -58,7 +58,8 @@ def tt_reconstruction(cores, d,r,n):
     for k in range(1, d-1):
         full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]),int(n[k]) * int(r[k + 1])))
         full_tensor = full_tensor.reshape(np.prod(n[:k + 1]), int(r[k + 1]))
-    return cores
+
+    return np.array(np.reshape(full_tensor, (512,512,3)))
 
 def compare(image1, image2):
     f = plt.figure()
@@ -76,7 +77,8 @@ img = Image.open('dog.jpg')
 core, d,r, n = tensortrain(img)
 # print(len(core))
 B = tt_reconstruction(core, d,r,n)
-
+B = np.array(B)
+print(B.shape)
 new_image = Image.fromarray((B).astype(np.uint8))
 old_image = img
 
