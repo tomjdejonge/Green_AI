@@ -39,14 +39,25 @@ def tensortrain(img, epsilon=0):
         p_1 = S[:int(r[k + 1]), :int(r[k + 1])]
         p_2 = V[:, :int(r[k + 1])]
         c = p_1 @ p_2.transpose()
+        print(k, r)
     g.append(np.reshape(c, (int(r[d - 1]), int(n[d - 1]), int(r[d])), order="F"))
     # print(g)
-    return g, d
+    for i in range(len(g)):
+        print(f'norm of core {i+1} = {linalg.norm(g[i])}')
+    print(f'norm of core = {linalg.norm(img)}')
+    return g, d, r, n
 
-def tt_reconstruction(cores, d):
+def tt_reconstruction(cores, d,r,n):
+    print(r)
+    r = r.astype(np.uint)
+    print(r)
+    print(n)
+    full_tensor = np.reshape(cores[0],(int(n[0]), int(r[1])))
 
-    for k in range(d-1):
-        cores[0] = np.matmul(cores[k], cores[k+1])
+    for k in range(1, d-1):
+        print(k, n[k] ,r[k + 1])
+        full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]),n[k] * r[k + 1]))
+        full_tensor = full_tensor.reshape(np.prod(int(n[:k + 1])), int(r[k + 1]))
     return cores
 
 def compare(image1, image2):
@@ -62,9 +73,9 @@ def compare(image1, image2):
 
 img = Image.open('dog.jpg')
 # img2 = Image.open('baboon.png')
-core, d = tensortrain(img)
+core, d,r, n = tensortrain(img)
 print(len(core))
-B = tt_reconstruction(core, d)
+B = tt_reconstruction(core, d,r,n)
 
 new_image = Image.fromarray((B).astype(np.uint8))
 old_image = img

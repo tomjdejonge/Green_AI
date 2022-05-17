@@ -105,7 +105,9 @@ class TT(object):
                 '                  ranks    = {r}'.format(d=self.order, m=self.row_dims, n=self.col_dims, r=self.ranks))
 
     def full(self):
-
+        print(self.ranks)
+        print(self.col_dims)
+        print(self.row_dims)
         if self.ranks[0] != 1 or self.ranks[-1] != 1:
             raise ValueError("The first and last rank have to be 1!")
 
@@ -137,9 +139,11 @@ def imshow(image):
 img_dog = np.array(Image.open('dog.jpg'))
 img_bab = np.array(Image.open('baboon.png'))
 img1 = np.reshape(img_bab, (4,4,4,4,4,4,4,4,4,3))
+
 # print(f'bab = {img_bab}')
 # print(f'dog = {img_dog}')
 dog = TT.full(TT(img1,threshold=0.2))
 # print(img.info)
 # print(dog.info)
-# imshow(dog.astype(np.uint8))
+imshow(img_bab.astype(np.uint8))
+imshow(dog.astype(np.uint8))
