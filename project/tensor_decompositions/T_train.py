@@ -51,10 +51,11 @@ class TT(object):
 
                 # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
                 p = [order * j + i for i in range(order) for j in range(2)]
+                print(p)
                 y = np.transpose(x, p).copy()
 
                 # decompose the full tensor
-                for i in range(order - 1):
+                for i in range(order -1):
                     # reshape residual tensor
                     m = ranks[i] * row_dims[i] * col_dims[i]
                     n = np.prod(row_dims[i + 1:]) * np.prod(col_dims[i + 1:])
@@ -126,27 +127,19 @@ class TT(object):
         q = [2 * i for i in range(self.order)] + [1 + 2 * i for i in range(self.order)]
         full_tensor = full_tensor.reshape(p).transpose(q)
 
-        return full_tensor
+        return np.array(np.reshape(full_tensor, (512,512,3)))
 
 
-img = np.array(Image.open('dog.jpg'))
-img1 = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-a = TT.full(TT(img1,threshold=0))
-reshaped_dog = np.reshape(a, (512, 512, 3))
-new_image = Image.fromarray(reshaped_dog.astype(np.uint8))
-# print(reshaped_dog.shape)
-old_image = img
+def imshow(image):
+    img = Image.fromarray(image)
+    img.show()
 
-print(f'norm of image is {linalg.norm(img1)}')
-
-def compare(image1, image2):
-    f = plt.figure()
-    f.add_subplot(1,2,1)
-    plt.imshow(image1)
-    plt.axis('off')
-    f.add_subplot(1,2,2)
-    plt.imshow(image2)
-    plt.axis('off')
-    plt.show(block=True)
-
-compare(old_image, new_image)
+img_dog = np.array(Image.open('dog.jpg'))
+img_bab = np.array(Image.open('baboon.png'))
+img1 = np.reshape(img_bab, (4,4,4,4,4,4,4,4,4,3))
+# print(f'bab = {img_bab}')
+# print(f'dog = {img_dog}')
+dog = TT.full(TT(img1,threshold=0.2))
+# print(img.info)
+# print(dog.info)
+# imshow(dog.astype(np.uint8))

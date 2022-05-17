@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    img = Image.open('dog.jpg_small.jpeg')
+    img = Image.open('dog.jpg')
     p = np.asarray(img)
     a = p
     d = 3
@@ -47,9 +47,9 @@ def main():
     g3 = np.transpose(g[d - 1])
     g3 = np.squeeze(g3)
     I = ty.tenalg.mode_dot(g2, g3, 2)
-    print(I)
+    # print(I)
     I = rearrange(I)
-    print(I)
+    # print(I)
     B = []
     for i in range(0, 3):
         res = np.matmul(g1, (I[:, :, i]))
