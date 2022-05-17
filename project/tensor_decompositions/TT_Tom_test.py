@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    img = Image.open('dog.jpg')
+    img = Image.open('dog.jpg_small.jpeg')
     p = np.asarray(img)
     a = p
-    d = 3
+    d = len(p.shape)
     r0 = 1
     r3 = r0
     epsilon = 0.2
@@ -62,7 +62,7 @@ def main():
         c[i] = (np.transpose(B[:, :, i]))
     c = np.array(c)
     Dog = (c.astype(np.uint8))
-    print(Dog)
+    # print(Dog)
     Dog = rearrange_2(Dog)
     new_image = Image.fromarray(Dog.astype(np.uint8))
     old_image = img
