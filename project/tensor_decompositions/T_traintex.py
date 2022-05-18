@@ -5,7 +5,7 @@ from scipy import linalg
 import numpy as np
 import tensorly as ty
 
-def tensortrain(img, epsilon=0.2):
+def tensortrain(img, epsilon=0.5):
 
     img = np.asarray(np.reshape(img, (4,4,4,4,4,4,4,4,4,3)))
     n = img.shape
@@ -36,7 +36,7 @@ def tensortrain(img, epsilon=0.2):
             rank += 1
             error = np.linalg.norm(s[rank+1:])
         r[k + 1] = rank +1
-        print(k,r)
+        # print(k,r)
         g.append(np.reshape(U[:, :int(r[k + 1])], [int(r[k]), int(n[k]), int(r[k + 1])]))
         p_1 = S[:int(r[k + 1]), :int(r[k + 1])]
         p_2 = V[:, :int(r[k + 1])]
@@ -46,9 +46,9 @@ def tensortrain(img, epsilon=0.2):
 
     g.append(np.reshape(c, (int(r[- 2]), int(n[- 1]),int(r[-1]),1)))
 
-    # for i in range(len(g)):
-    #     print(f'norm of core {i+1} = {linalg.norm(g[i])}')
-    # print(f'norm of core = {linalg.norm(img)}')
+    for i in range(len(g)):
+        print(f'norm of core {i+1} = {linalg.norm(g[i])}')
+    print(f'norm of core = {linalg.norm(img)}')
     return g, d, r, n
 
 def tt_reconstruction(cores,d,r,n):
@@ -67,7 +67,6 @@ def tt_reconstruction(cores,d,r,n):
     # print(f'q = {q}')
     # full_tensor = full_tensor.reshape(n).transpose(q)
     # full_tensor = full_tensor * 255 / (abs(full_tensor.min()) + full_tensor.max())
-
 
     return np.array(np.reshape(full_tensor, (512,512,3)))
 
