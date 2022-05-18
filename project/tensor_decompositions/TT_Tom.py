@@ -2,6 +2,7 @@ from PIL import Image
 from scipy import linalg
 import numpy as np
 import matplotlib.pyplot as plt
+from tensorly import unfold
 
 
 def main():
@@ -10,22 +11,21 @@ def main():
     small_dog = 'dog.jpg_small.jpeg'
     original_image = Image.open(dog)
     tt, d, r, n = tt_decomposition(original_image)
-    reconstructed_image = reconstruction(tt, d, r, n)
-    # compare(original_image, reconstructed_image)
+    reconstructed_image = reconstruction_2(tt, d, r, n)
+    compare(original_image, reconstructed_image)
 
 
-def tt_decomposition(tensor, epsilon=0.01):
+def tt_decomposition(tensor, epsilon=0.1):
     p = np.asarray(np.reshape(tensor, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3)))
     n = p.shape
     d = len(n)
     delta = (epsilon / np.sqrt(d - 1)) * np.linalg.norm(p)
-    r = np.zeros(d + 1)
+    r = np.zeros(d+1)
     r[0] = 1
     r[-1] = 1
     g = []
     c = p.copy()
-    for k in range(d - 1):
-        # print(k)
+    for k in range(d-1):
         m = int(r[k] * n[k])  # r_(k-1)*n_k
         b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
         c = np.reshape(c, [m, b])
@@ -41,13 +41,13 @@ def tt_decomposition(tensor, epsilon=0.01):
             rank += 1
             error = np.linalg.norm(s[rank + 1:])
         r[k + 1] = rank + 1
-        # print(k,r)
-        g.append(np.reshape(U[:, :int(r[k + 1])], [int(r[k]), int(n[k]), int(r[k + 1])]))
-        p_1 = S[:int(r[k + 1]), :int(r[k + 1])]
-        p_2 = V[:, :int(r[k + 1])]
+        g.append(np.reshape(U[:, :int(r[k+1])], [int(r[k]), int(n[k]), int(r[k+1])]))
+        p_1 = S[:int(r[k+1]), :int(r[k+1])]
+        p_2 = V[:, :int(r[k+1])]
         c = p_1 @ p_2.transpose()
-    g.append(np.reshape(c, (int(r[d - 1]), int(n[d - 1]), int(r[d]))))
-    # for i in range(len(g)):
+    g.append(np.reshape(c, (int(r[d-1]), int(n[d-1]), int(r[d]))))
+    for i in range(len(g)):
+        print(g[i].shape)
     #     print(f'norm of core {i+1} = {linalg.norm(g[i])}')
     # print(f'norm of tensor = {linalg.norm(p)}')
     return g, d, r, n
@@ -69,16 +69,25 @@ def reconstruction(g, d, r, n):
     # print(f'q = {q}')
     # full_tensor = full_tensor.reshape(n).transpose(q)
     # full_tensor = full_tensor * 255 / (abs(full_tensor.min()) + full_tensor.max())
-    z = np.array(np.reshape(full_tensor, (512, 512, 3)))
-    print(z.astype(np.uint8))
+    z = np.array(np.reshape(full_tensor, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3)))
+    z = np.reshape(z, (512, 512, 3))
     return Image.fromarray(z.astype(np.uint8), 'RGB')
+
 
 def reconstruction_2(g, d, r, n):
     a = r[0]
     T = g[0]
     for i in range(d-1):
         x = T.shape
-        e = np.reshape(T, (a*n[i], r[i+1]))
+        print(x)
+        e = np.reshape(T, (int(a)*int(n[i]), int(r[i+1])))
+        T = unfold(g[i+1], 1)
+        a = a*int(n[i])
+        T = e*T
+        T = np.reshape(T, [a, int(r[i+2]), int(n[i+1])])
+    T = np.reshape(T, [4, 4, 4, 4, 4, 4, 4, 4, 4, 3])
+    T = np.reshape(T, (512, 512, 3))
+    return Image.fromarray(T.astype(np.uint8), 'RGB')
 
 
 def compare(image1, image2):
