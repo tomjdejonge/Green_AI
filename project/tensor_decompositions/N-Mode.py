@@ -33,7 +33,7 @@ def unfold(tensor, x):
         shape = tensor.shape
         res = np.reshape(tensor, (shape[0], shape[1] * shape[2]))
     return res
-
+ # https://www.kolda.net/publication/TensorReview.pdf
 # print(unfold(Y,1))
 # print(unfold(Y,2))
 # print(unfold(Y,3))
