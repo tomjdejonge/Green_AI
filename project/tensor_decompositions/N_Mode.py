@@ -65,7 +65,6 @@ def unfold(tensor, mode):
 
 
 def fold(unfolded_tensor, mode, shape):
-
     full_shape = list(shape)
     mode_dim = full_shape.pop(mode)
     full_shape.insert(0, mode_dim)
@@ -73,11 +72,9 @@ def fold(unfolded_tensor, mode, shape):
 
 
 def unfold(tensor, mode):
-
     return ty.reshape(ty.moveaxis(tensor, mode, 0), (tensor.shape[mode], -1))
 
 def mode_dot(tensor, matrix_or_vector, mode):
-
     # the mode along which to fold might decrease if we take product with a vector
     fold_mode = mode
     new_shape = list(tensor.shape)
