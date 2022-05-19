@@ -51,7 +51,7 @@ X = A.dot(unfold(Y,1))
 
 # W = V.dot(unfold(Y,2))
 # print(np.reshape(W,(3,2)))
-print(nmultiplication(np.array(B).reshape(512,3,512),A,1))
+# print(nmultiplication(np.array(B).reshape(512,3,512),A,1))
 # #nmodeproduct
 # print(unfold(Y,1).dot(A.transpose(1,0)))
 # print(ty.tenalg.mode_dot(Y,A,1))
@@ -63,3 +63,4 @@ print(nmultiplication(np.array(B).reshape(512,3,512),A,1))
 # print(unfold(Y,1).shape)
 #
 # print(unfold(Y,1).dot(A))
+print(nmultiplication(Y, A, 1))
