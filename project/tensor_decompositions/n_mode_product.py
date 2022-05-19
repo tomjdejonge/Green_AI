@@ -1,6 +1,6 @@
 import numpy as np
 from tensor_helpers import vec_to_tensor, tensor_to_vec
-from n_mode_unfold_and_fold import reorder, unfold, unfold_ty, fold, fold_ty
+from n_mode_unfold_and_fold import unfold_ty, fold_ty
 import tensorly as ty
 
 
@@ -38,7 +38,7 @@ U = np.array([[1, 3, 5],
              [2, 4, 6]])
 
 
-def n_mode_product(tensor, matrix_or_vector, mode, transpose=False):
+def n_mode_product_ty(tensor, matrix_or_vector, mode, transpose=False):
     # the mode along which to fold might decrease if we take product with a vector
     fold_mode = mode
     new_shape = list(tensor.shape)
@@ -76,12 +76,12 @@ def n_mode_product(tensor, matrix_or_vector, mode, transpose=False):
         raise ValueError('Can only take n_mode_product with a vector or a matrix.'
                          'Provided array of dimension {} not in [1, 2].'.format(np.ndim(matrix_or_vector)))
 
-    res = np.dot(matrix_or_vector, unfold(tensor, mode))
+    res = np.dot(matrix_or_vector, unfold_ty(tensor, mode))
 
     if vec:  # We contracted with a vector, leading to a vector
         return vec_to_tensor(res, shape=new_shape)
     else:  # tensor times vec: refold the unfolding
-        return (fold(res, fold_mode, new_shape))
+        return fold_ty(res, fold_mode, new_shape)
 
 
-print(n_mode_product(X_kolda, U, 0))
+print(n_mode_product_ty(X_kolda, U, 0))
