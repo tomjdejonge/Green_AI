@@ -144,14 +144,12 @@ def imshow(image):
     img = Image.fromarray(image)
     img.show()
 
-img_dog = np.array(Image.open('dog.jpg'))
 img_bab = np.array(Image.open('baboon.png'))
-img1 = np.reshape(img_bab, (4,4,4,4,4,4,4,4,4,3))
-# print(TT(img1,threshold=0.2))
-# print(f'bab = {img_bab}')
-# print(f'dog = {img_dog}')
+img_dog = np.array(Image.open('dog.jpg'))
+
+img1 = np.reshape(img_dog, (4,4,4,4,4,4,4,4,4,3))
+
 dog = TT.full(TT(img1,threshold=0.1))
-# print(img.info)
-# print(dog.info)
-# imshow(img_bab.astype(np.uint8))
-# imshow(dog.astype(np.uint8))
+
+imshow(img_dog.astype(np.uint8))
+imshow(dog.astype(np.uint8))
