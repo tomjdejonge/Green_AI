@@ -34,7 +34,7 @@ def unfold(tensor, x):
         tensor = tensor.transpose(0, 2, 1)
         shape = tensor.shape
         res = np.reshape(tensor, (shape[0], shape[1] * shape[2]))
-    return res
+    return res  # tl.reshape(tl.moveaxis(tensor, mode, 0), (tensor.shape[mode], -1))
 # https://www.kolda.net/publication/TensorReview.pdf
 
 

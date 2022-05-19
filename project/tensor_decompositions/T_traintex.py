@@ -87,3 +87,28 @@ new_image = Image.fromarray((B).astype(np.uint8),'RGB')
 old_image = img
 
 # compare(old_image, new_image)
+
+def unfold(tensor, x):
+
+    if x==1:
+        tensor = tensor.transpose(1, 0, 2)
+        shape = tensor.shape
+        res = np.reshape(tensor, (shape[0],shape[1]*shape[2]))
+    elif x==2:
+        tensor = tensor.transpose(2,0,1)
+        shape = tensor.shape
+        res = np.reshape(tensor, (shape[0],shape[1]*shape[2]))
+    elif x==3:
+        tensor = tensor.transpose(0, 2, 1)
+        shape = tensor.shape
+        res = np.reshape(tensor, (shape[0], shape[1] * shape[2]))
+    return res
+# https://www.kolda.net/publication/TensorReview.pdf
+
+
+def nmultiplication(tensor, matrix, n):
+    tshape = tensor.shape
+    mshape = matrix.shape
+    # print(tshape,"aaa",mshape)
+    res = matrix.dot(unfold(tensor,n))
+    return np.reshape(res,(mshape[0],tshape[0],tshape[2]))

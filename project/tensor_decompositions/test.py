@@ -1,231 +1,227 @@
-# -*- coding: utf-8 -*-
-
-
-import time as _time
-import numpy as np
+import tensorly as tl
+# from ._base_decomposition import DecompositionMixin
+# from ..tt_tensor import validate_tt_rank, TTTensor
+# from ..tt_matrix import validate_tt_matrix_rank, TTMatrix
+# from ..utils import DefineDeprecated
+import matplotlib.pyplot as plt
+from PIL import Image
 from scipy import linalg
-import matplotlib.image as image
+import numpy as np
 
 
-class TT(object):
-    """
-    Tensor train class
-    Tensor trains [1]_ are defined in terms of different attributes. That is, a tensor train with order ``d`` is
-    given by a list of 4-dimensional tensors
-        ``[cores[0] , ..., cores[d-1]]``,
-    where ``cores[i]`` is an ndarry with dimensions
-        ``ranks[i] x row_dims[i] x col_dims[i] x ranks[i+1]``.
-    There is no distinguish between tensor trains and tensor trains operators, i.e. a classical tensor train is
-    represented by cores with column dimensions equal to 1.
-    An instance of the tensor train class can be initialized either from a list of cores, i.e. ``t = TT(cores)``
-    where ``cores`` is a list as described above, or from a full tensor representation, i.e. ``t = TT(x)`` where
-    ``x`` is an ndarray with dimensions
-        ``row_dims[0] x ... x row_dims[-1] x col_dims[0] x ... x col_dims[-1]``.
-    In the latter case, the tensor is decomposed into the TT format. For more information on the implemented tensor
-    operations, we refer to [2]_.
-    Attributes
-    ----------
-    order : int
-        order of the tensor train
-    row_dims : list[int]
-        list of the row dimensions of the tensor train
-    col_dims : list[int]
-        list of the column dimensions of the tensor train
-    ranks : list[int]
-        list of the ranks of the tensor train
-    cores : list[np.ndarray]
-        list of the cores of the tensor train
-    Methods
-    -------
-    print(t)
-        string representation of tensor trains
-    +
-        sum of two tensor trains
-    -
-        difference of two tensor trains
-    *
-        multiplication of tensor trains and scalars
-    @/dot(t,u)
-        multiplication of two tensor trains
-    tensordot
-        index contraction between two tensortrains
-    rank_tensordot
-        index contraction between TT and matrix along the rank-dimension
-    concatenate
-        concatenate cores of two TT
-    transpose(t)
-        transpose of a tensor train
-    rank_transpose
-        rank-transpose of a tensor train
-    conj
-        complex conjugate of a tensor train
-    isoperator(t)
-        check is given tensor train is an operator
-    copy(t)
-        deep copy of a tensor train
-    element(t, indices)
-        element of t at given indices
-    full(t)
-        convert tensor train to full format
-    matricize(t)
-        matricization of a tensor train
-    ortho_left(t)
-        left-orthonormalization of a tensor train
-    ortho_right(t)
-        right-orthonormalization of a tensor train
-    ortho(t)
-        left- and right-orthonormalization of a tensor train
-    norm(t)
-        norm of a tensor train
-    tt2qtt
-        conversion from TT format into QTT format
-    qtt2tt
-        conversion from QTT format into TT format
-    svd
-        Computation of a global SVD of a tensor train
-    pinv
-        Computation of the pseudoinverse of a tensor train
-    References
-    ----------
-    .. [1] I. V. Oseledets, "Tensor-Train Decomposition", SIAM Journal on Scientific Computing 33 (5), 2011
-    .. [2] P. Gelß. "The Tensor-Train Format and Its Applications: Modeling and Analysis of Chemical Reaction
-           Networks, Catalytic Processes, Fluid Flows, and Brownian Dynamics", Freie Universität Berlin, 2017
+def validate_tt_rank(tensor_shape, rank='same', constant_rank=False, rounding='round',
+                     allow_overparametrization=True):
 
-    Examples
-    --------
-    Construct tensor train from list of cores:
-    Construct tensor train from ndarray:
-    >>> import numpy as np
-    >>> from scikit_tt.tensor_train import TT
+    if rounding == 'ceil':
+        rounding_fun = np.ceil
+    elif rounding == 'floor':
+        rounding_fun = np.floor
+    elif rounding == 'round':
+        rounding_fun = np.round
+    else:
+        raise ValueError(f'Rounding should be round, floor or ceil, but got {rounding}')
 
-    """
+    if rank == 'same':
+        rank = float(1)
 
-    def __init__(self, x, threshold=0, max_rank=np.infty, progress=False, string=None):
-        """
-        Parameters
-        ----------
-        x : list[np.ndarray] or np.ndarray
-            either a list[TT] cores or a full tensor
-        threshold : float, optional
-            threshold for reduced SVD decompositions, default is 0
-        max_rank : int, optional
-            maximum rank of the left-orthonormalized tensor train, default is np.infty
-        Raises
-        ------
-        TypeError
-            if x is neither a list of ndarray nor a single ndarray
-        ValueError
-            if list elements of x are not 4-dimensional tensors or shapes do not match
-        ValueError
-            if number of dimensions of the ndarray x is not a multiple of 2
-        """
+    if isinstance(rank, float) and constant_rank:
+        # Choose the *same* rank for each mode
+        n_param_tensor = np.prod(tensor_shape) * rank
+        order = len(tensor_shape)
 
-        # initialize from list of cores
-        if isinstance(x, list):
+        if order == 2:
+            rank = (1, n_param_tensor / (tensor_shape[0] + tensor_shape[1]), 1)
+            warnings.warn(
+                f'Determining the tt-rank for the trivial case of a matrix (order 2 tensor) of shape {tensor_shape}, not a higher-order tensor.')
 
-            # check if orders of list elements are correct
-            if np.all([x[i].ndim == 4 for i in range(len(x))]):
+        # R_k I_k R_{k+1} = R^2 I_k
+        a = np.sum(tensor_shape[1:-1])
 
-                # check if ranks are correct
-                if np.all([x[i].shape[3] == x[i + 1].shape[0] for i in range(len(x) - 1)]):
+        # Border rank of 1, R_0 = R_N = 1
+        # First and last factor of size I_0 R and I_N R
+        b = np.sum(tensor_shape[0] + tensor_shape[-1])
 
-                    # define order, row dimensions, column dimensions, ranks, and cores
-                    self.order = len(x)
-                    self.row_dims = [x[i].shape[1] for i in range(self.order)]
-                    self.col_dims = [x[i].shape[2] for i in range(self.order)]
-                    self.ranks = [x[i].shape[0] for i in range(self.order)] + [x[-1].shape[3]]
-                    self.cores = x
+        # We want the number of params of decomp (=sum of params of factors)
+        # To be equal to c = \prod_k I_k
+        c = -n_param_tensor
+        delta = np.sqrt(b ** 2 - 4 * a * c)
 
-                    # rank reduction
-                    if threshold != 0 or max_rank != np.infty:
-                        self.ortho(threshold=threshold, max_rank=max_rank)
+        # We get the non-negative solution
+        solution = int(rounding_fun((- b + delta) / (2 * a)))
+        rank = rank = (1,) + (solution,) * (order - 1) + (1,)
 
-                else:
-                    raise ValueError('Shapes of list elements do not match.')
-
-            else:
-                raise ValueError('List elements must be 4-dimensional arrays.')
-
-        # initialize from full array
-        elif isinstance(x, np.ndarray):
-
-            # check if order of ndarray is a multiple of 2
-            if np.mod(x.ndim, 2) == 0:
-
-                # show progress
-                if string is None:
-                    string = 'HOSVD'
-                start_time = utl.progress(string, 0, show=progress)
-
-                # define order, row dimensions, column dimensions, ranks, and cores
-                order = len(x.shape) // 2
-                row_dims = x.shape[:order]
-                col_dims = x.shape[order:]
-                ranks = [1] * (order + 1)
-                cores = []
-
-                # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
-                p = [order * j + i for i in range(order) for j in range(2)]
-                y = np.transpose(x, p).copy()
-
-                # decompose the full tensor
-                for i in range(order - 1):
-                    # reshape residual tensor
-                    m = ranks[i] * row_dims[i] * col_dims[i]
-                    n = np.prod(row_dims[i + 1:]) * np.prod(col_dims[i + 1:])
-                    y = np.reshape(y, [m, n])
-
-                    # apply SVD in order to isolate modes
-                    [u, s, v] = linalg.svd(y, full_matrices=False)
-
-                    # rank reduction
-                    if threshold != 0:
-                        indices = np.where(s / s[0] > threshold)[0]
-                        u = u[:, indices]
-                        s = s[indices]
-                        v = v[indices, :]
-                    if max_rank != np.infty:
-                        u = u[:, :np.minimum(u.shape[1], max_rank)]
-                        s = s[:np.minimum(s.shape[0], max_rank)]
-                        v = v[:np.minimum(v.shape[0], max_rank), :]
-
-                    # define new TT core
-                    ranks[i + 1] = u.shape[1]
-                    cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
-
-                    # set new residual tensor
-                    y = np.diag(s).dot(v)
-
-                    # show progress
-                    utl.progress(string, 100 * (i + 1) / order, cpu_time=_time.time() - start_time, show=progress)
-
-                # define last TT core
-                cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
-
-                # initialize tensor train
-                self.__init__(cores)
-
-                # show progress
-                utl.progress(string, 100, cpu_time=_time.time() - start_time, show=progress)
-
-            else:
-                raise ValueError('Number of dimensions must be a multiple of 2.')
-
+    elif isinstance(rank, float):
+        # Choose a rank proportional to the size of each mode
+        # The method is similar to the above one for constant_rank == True
+        order = len(tensor_shape)
+        avg_dim = [(tensor_shape[i] + tensor_shape[i + 1]) / 2 for i in range(order - 1)]
+        if len(avg_dim) > 1:
+            a = sum(avg_dim[i - 1] * tensor_shape[i] * avg_dim[i] for i in range(1, order - 1))
         else:
-            raise TypeError('Parameter must be either a list of cores or an ndarray.')
+            warnings.warn(
+                f'Determining the tt-rank for the trivial case of a matrix (order 2 tensor) of shape {tensor_shape}, not a higher-order tensor.')
+            a = avg_dim[0] ** 2 * tensor_shape[0]
+        b = tensor_shape[0] * avg_dim[0] + tensor_shape[-1] * avg_dim[-1]
+        c = -np.prod(tensor_shape) * rank
+        delta = np.sqrt(b ** 2 - 4 * a * c)
 
-    def __repr__(self):
-        """
-        String representation of tensor trains
-        Print the attributes of a given tensor train.
-        """
+        # We get the non-negative solution
+        fraction_param = (- b + delta) / (2 * a)
+        rank = tuple([max(int(rounding_fun(d * fraction_param)), 1) for d in avg_dim])
+        rank = (1,) + rank + (1,)
 
-        return ('\n'
-                'Tensor train with order    = {d}, \n'
-                '                  row_dims = {m}, \n'
-                '                  col_dims = {n}, \n'
-                '                  ranks    = {r}'.format(d=self.order, m=self.row_dims, n=self.col_dims, r=self.ranks))
+    else:
+        # Check user input for potential errors
+        n_dim = len(tensor_shape)
+        if isinstance(rank, int):
+            rank = [1] + [rank] * (n_dim - 1) + [1]
+        elif n_dim + 1 != len(rank):
+            message = 'Provided incorrect number of ranks. Should verify len(rank) == tl.ndim(tensor)+1, but len(rank) = {} while tl.ndim(tensor) + 1  = {}'.format(
+                len(rank), n_dim + 1)
+            raise (ValueError(message))
+
+        # Initialization
+        if rank[0] != 1:
+            message = 'Provided rank[0] == {} but boundaring conditions dictatate rank[0] == rank[-1] == 1: setting rank[0] to 1.'.format(
+                rank[0])
+            raise ValueError(message)
+        if rank[-1] != 1:
+            message = 'Provided rank[-1] == {} but boundaring conditions dictatate rank[0] == rank[-1] == 1: setting rank[-1] to 1.'.format(
+                rank[0])
+            raise ValueError(message)
+
+    if allow_overparametrization:
+        return list(rank)
+    else:
+        validated_rank = [1]
+        for i, s in enumerate(tensor_shape[:-1]):
+            n_row = int(rank[i] * s)
+            n_column = np.prod(tensor_shape[(i + 1):])  # n_column of unfolding
+            validated_rank.append(min(n_row, n_column, rank[i + 1]))
+        validated_rank.append(1)
+
+        return validated_rank
 
 
-img=image.imread('dog.jpg')
-print(TT(img))
+def tensor_train(input_tensor, rank, verbose=False):
+
+    rank = validate_tt_rank(tl.shape(input_tensor), rank=rank)
+    tensor_size = input_tensor.shape
+    n_dim = len(tensor_size)
+    # print(rank)
+    unfolding = input_tensor
+    factors = [None] * n_dim
+
+    # Getting the TT factors up to n_dim - 1
+    for k in range(n_dim - 1):
+
+        # Reshape the unfolding matrix of the remaining factors
+        n_row = int(rank[k] * tensor_size[k])
+        unfolding = tl.reshape(unfolding, (n_row, -1))
+
+        # SVD of unfolding matrix
+        (n_row, n_column) = unfolding.shape
+        current_rank = min(n_row, n_column, rank[k + 1])
+        U, S, V = tl.partial_svd(unfolding, current_rank)
+        rank[k + 1] = current_rank
+
+        # Get kth TT factor
+        factors[k] = tl.reshape(U, (rank[k], tensor_size[k], rank[k + 1]))
+
+        if (verbose is True):
+            print("TT factor " + str(k) + " computed with shape " + str(factors[k].shape))
+
+        # Get new unfolding matrix for the remaining factors
+        unfolding = tl.reshape(S, (-1, 1)) * V
+
+    # Getting the last factor
+    (prev_rank, last_dim) = unfolding.shape
+    factors[-1] = tl.reshape(unfolding, (prev_rank, last_dim, 1))
+
+    if (verbose is True):
+        print("TT factor " + str(n_dim - 1) + " computed with shape " + str(factors[n_dim - 1].shape))
+
+    return factors
+
+
+def tensor_train_matrix(tensor, rank):
+    """Decompose a tensor into a matrix in tt-format
+
+    Parameters
+    ----------
+    tensor : tensorized matrix
+        if your input matrix is of size (4, 9) and your tensorized_shape (2, 2, 3, 3)
+        then tensor should be tl.reshape(matrix, (2, 2, 3, 3))
+    rank : 'same', float or int tuple
+        - if 'same' creates a decomposition with the same number of parameters as `tensor`
+        - if float, creates a decomposition with `rank` x the number of parameters of `tensor`
+        - otherwise, the actual rank to be used, e.g. (1, rank_2, ..., 1) of size tensor.ndim//2. Note that boundary conditions dictate that the first rank = last rank = 1.
+
+    Returns
+    -------
+    tt_matrix
+    """
+    order = tl.ndim(tensor)
+    n_input = order // 2  # (n_output = n_input)
+
+    if tl.ndim(tensor) != n_input * 2:
+        msg = 'The tensor should have as many dimensions for inputs and outputs, i.e. order should be even '
+        msg += f'but got a tensor of order tl.ndim(tensor)={order} which is odd.'
+        raise ValueError(msg)
+
+    in_shape = tl.shape(tensor)[:n_input]
+    out_shape = tl.shape(tensor)[n_input:]
+
+    if n_input == 1:
+        # A TTM with a single factor is just a matrix...
+        return TTMatrix([tensor.reshape(1, in_shape[0], out_shape[0], 1)])
+
+    new_idx = list([idx for tuple_ in zip(range(n_input), range(n_input, 2 * n_input)) for idx in tuple_])
+    new_shape = list([a * b for (a, b) in zip(in_shape, out_shape)])
+    tensor = tl.reshape(tl.transpose(tensor, new_idx), new_shape)
+
+    factors = tensor_train(tensor, rank).factors
+    for i in range(len(factors)):
+        factors[i] = tl.reshape(factors[i], (factors[i].shape[0], in_shape[i], out_shape[i], -1))
+
+    return TTMatrix(factors)
+
+
+def tt_to_tensor(factors):
+
+    if isinstance(factors, (float, int)): #0-order tensor
+        return factors
+
+    full_shape = [f.shape[1] for f in factors]
+    full_tensor = tl.reshape(factors[0], (full_shape[0], -1))
+
+    for factor in factors[1:]:
+        rank_prev, _, rank_next = factor.shape
+        factor = tl.reshape(factor, (rank_prev, -1))
+        full_tensor = tl.dot(full_tensor, factor)
+        full_tensor = tl.reshape(full_tensor, (-1, rank_next))
+
+    return tl.reshape(full_tensor, full_shape)
+
+def compare(image1, image2):
+    f = plt.figure()
+    f.add_subplot(1,2, 1)
+    plt.imshow(image1)
+    plt.axis('off')
+    f.add_subplot(1,2,2)
+    plt.imshow(image2)
+    plt.axis('off')
+    plt.show()
+
+img2 = Image.open('baboon.png')
+img = Image.open('dog.jpg')
+img = np.asarray(img)
+img = np.reshape(img, (4,4,4,4,4,4,4,4,4,3))
+core = tensor_train(img.astype(float),4)
+print(len(core))
+# B = tt_reconstruction(core, d,r,n)
+# B = np.array(B)
+B = tt_to_tensor(core)
+B = np.reshape(B, (512,512,3))
+new_image = Image.fromarray((B).astype(np.uint8),'RGB')
+compare(new_image, new_image)
