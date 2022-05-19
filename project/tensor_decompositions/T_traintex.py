@@ -46,9 +46,9 @@ def tensortrain(img, epsilon=0.2):
 
     g.append(np.reshape(c, (int(r[- 2]), int(n[- 1]),int(r[-1]),1)))
 
-    for i in range(len(g)):
-        print(f'norm of core {i+1} = {linalg.norm(g[i])}')
-    print(f'norm of core = {linalg.norm(img)}')
+    # for i in range(len(g)):
+    #     print(f'norm of core {i+1} = {linalg.norm(g[i])}')
+    # print(f'norm of core = {linalg.norm(img)}')
     return g, d, r, n
 
 def tt_reconstruction(cores,d,r,n):
@@ -86,4 +86,4 @@ B = np.array(B)
 new_image = Image.fromarray((B).astype(np.uint8),'RGB')
 old_image = img
 
-compare(old_image, new_image)
+# compare(old_image, new_image)

@@ -35,17 +35,23 @@ def unfold(tensor, x):
         shape = tensor.shape
         res = np.reshape(tensor, (shape[0], shape[1] * shape[2]))
     return res
- # https://www.kolda.net/publication/TensorReview.pdf
+# https://www.kolda.net/publication/TensorReview.pdf
 
 
 def nmultiplication(tensor, matrix, n):
-
+    tshape = tensor.shape
+    mshape = matrix.shape
+    # print(tshape,"aaa",mshape)
     res = matrix.dot(unfold(tensor,n))
-    return np.reshape(res,2,2,4)
+    return np.reshape(res,(mshape[0],tshape[0],tshape[2]))
+
 X = A.dot(unfold(Y,1))
-print(np.reshape(X,(2,2,4)))
-W = V.dot(unfold(Y,2))
-print(np.reshape(W,(3,2)))
+# print(np.reshape(X,(2,2,4)).shape)
+
+
+# W = V.dot(unfold(Y,2))
+# print(np.reshape(W,(3,2)))
+print(nmultiplication(np.array(B).reshape(512,3,512),A,1))
 # #nmodeproduct
 # print(unfold(Y,1).dot(A.transpose(1,0)))
 # print(ty.tenalg.mode_dot(Y,A,1))
