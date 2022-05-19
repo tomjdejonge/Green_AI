@@ -16,7 +16,7 @@ A = np.array([[1,3,5],[2,4,6]])
 Y = np.array([[[1,4,7,10],[2,5,8,11],[3,6,9,12]],
                 [[13,16,19,22],[14,17,20,23],[15,18,21,24]]])
 V = np.array([[1,2,3,4]])
-print(V)
+# print(V)
 # Y = np.reshape(Y, (3,4,2))
 # A = A.transpose(1,0)
 # print(Y.shape)
@@ -48,19 +48,6 @@ def nmultiplication(tensor, matrix, n):
 
 
 def unfold(tensor, mode):
-    """Returns the mode-`mode` unfolding of `tensor` with modes starting at `0`.
-
-    Parameters
-    ----------
-    tensor : ndarray
-    mode : int, default is 0
-           indexing starts at 0, therefore mode is in ``range(0, tensor.ndim)``
-
-    Returns
-    -------
-    ndarray
-        unfolded_tensor of shape ``(tensor.shape[mode], -1)``
-    """
     return ty.reshape(ty.moveaxis(tensor, mode, 0), (tensor.shape[mode], -1))
 
 
