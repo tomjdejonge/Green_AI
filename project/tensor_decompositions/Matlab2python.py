@@ -4,14 +4,13 @@ import numpy as np
 import tensorly as ty
 import matplotlib.pyplot as plt
 
-img = Image.open('baboon.png')
+img = Image.open('dog.jpg_small.jpeg')
 image_sequence = img.getdata()
 P = np.array(image_sequence)
-A = P.reshape([4, 4, 4, 4, 4, 4, 4, 4, 4, 3], order='F').copy()
-
+A = P.reshape([8, 4, 2, 3], order='F').copy()
 # Variables
 d = len(A.shape)
-epsilon = 0.1
+epsilon = 0
 delta = (epsilon / np.sqrt(d - 1)) * np.linalg.norm(A)
 
 # Arrays
@@ -46,5 +45,6 @@ for k in range(d-1):
     C = p_1 @ p_2.transpose()
 tt.append(np.reshape(C, (int(r[d - 1]), int(n[d - 1]), int(r[d]))))
 for i in range(len(tt)):
-    print(f'norm of core {i+1} = {linalg.norm(tt[i])}')
-print(f'norm of tensor = {linalg.norm(P)}')
+    print(tt[i])
+    # print(f'norm of core {i+1} = {linalg.norm(tt[i])}')
+# print(f'norm of tensor = {linalg.norm(P)}')
