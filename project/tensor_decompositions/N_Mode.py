@@ -46,11 +46,6 @@ def nmultiplication(tensor, matrix, n):
     res = matrix.dot(unfold(tensor,n))
     return np.reshape(res,(mshape[0],tshape[0],tshape[2]))
 
-
-def unfold(tensor, mode):
-    return ty.reshape(ty.moveaxis(tensor, mode, 0), (tensor.shape[mode], -1))
-
-
 def fold(unfolded_tensor, mode, shape):
     full_shape = list(shape)
     mode_dim = full_shape.pop(mode)
@@ -63,9 +58,9 @@ def unfold(tensor, mode):
 
 def mode_dot(tensor, matrix_or_vector, mode):
     # the mode along which to fold might decrease if we take product with a vector
+    mode = mode-1
     fold_mode = mode
     new_shape = list(tensor.shape)
-
     if len(matrix_or_vector.shape) == 2:  # Tensor times matrix
         # Test for the validity of the operation
         dim = 1
@@ -94,7 +89,7 @@ def mode_dot(tensor, matrix_or_vector, mode):
     else:  # tensor times vec: refold the unfolding
         return fold(res, fold_mode, new_shape)
 
-print(mode_dot(Y, A, 1))
+# print(mode_dot(Y, A, 1))
 
 # X = A.dot(unfold(Y,1))
 # print(np.reshape(X,(2,2,4)).shape)

@@ -145,22 +145,7 @@ def tensor_train(input_tensor, rank, verbose=False):
 
 
 def tensor_train_matrix(tensor, rank):
-    """Decompose a tensor into a matrix in tt-format
 
-    Parameters
-    ----------
-    tensor : tensorized matrix
-        if your input matrix is of size (4, 9) and your tensorized_shape (2, 2, 3, 3)
-        then tensor should be tl.reshape(matrix, (2, 2, 3, 3))
-    rank : 'same', float or int tuple
-        - if 'same' creates a decomposition with the same number of parameters as `tensor`
-        - if float, creates a decomposition with `rank` x the number of parameters of `tensor`
-        - otherwise, the actual rank to be used, e.g. (1, rank_2, ..., 1) of size tensor.ndim//2. Note that boundary conditions dictate that the first rank = last rank = 1.
-
-    Returns
-    -------
-    tt_matrix
-    """
     order = tl.ndim(tensor)
     n_input = order // 2  # (n_output = n_input)
 
@@ -218,7 +203,9 @@ img = Image.open('dog.jpg')
 img = np.asarray(img)
 img = np.reshape(img, (4,4,4,4,4,4,4,4,4,3))
 core = tensor_train(img.astype(float),4)
-print(len(core))
+
+for i in range(len(core)):
+    print(core[i].shape)
 # B = tt_reconstruction(core, d,r,n)
 # B = np.array(B)
 B = tt_to_tensor(core)
