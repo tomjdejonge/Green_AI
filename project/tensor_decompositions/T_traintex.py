@@ -88,12 +88,12 @@ def border(img, low, high, p=False):
             for z in range(len(img[0][0])):
                 if img[x][y][z] <= low:
                     lowcount += 1
-                    img[x][y][z] = low
+                    img[x][y][z] = low - img[x][y][z]
 
                 elif img[x][y][z] >= high:
                     highcount += 1
                     # print(B[x][y][z])
-                    img[x][y][z] = high
+                    img[x][y][z] = 2* high - img[x][y][z]
 
     print(lowcount,highcount)
 
