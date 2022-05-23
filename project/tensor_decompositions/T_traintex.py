@@ -38,7 +38,7 @@ def tensortrain(img, epsilon=0.1):
         c = p_1 @ p_2.transpose()
 
     g.append(np.reshape(c, (int(r[- 2]), int(n[- 1]), int(r[-1]), 1)))
-
+    g.append(len(g))
     # for i in range(len(g)):
     #     print(f'norm of core {i+1} = {linalg.norm(g[i])}')
     # print(f'norm of core = {linalg.norm(img)}')
@@ -98,13 +98,14 @@ def test(tensor, tt, epsilon, d, r, n):
     else:
         print('slecht gedaan tom en tex')
 
-
-
-
 img2 = Image.open('baboon.png')
 img = Image.open('dog.jpg')
 
 core, d, r, n = tensortrain(img)
+# print(core[-1])
+# for i in range(len(core)-1):
+#     print(i, 'aaa', core[i].shape)
+#     print(linalg.norm(core[i]))
 
 B = tt_reconstruction(core, d, r, n)
 B = border(np.array(B), 0, 255, p=True)
