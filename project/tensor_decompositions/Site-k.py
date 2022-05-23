@@ -21,8 +21,8 @@ C = len(core)-1
 def sitek(core):
     v = linalg.norm(core[d - 1])
     C = len(core) - 1
-    for i in range(K):
-        # print(K)
+    for i in range(C):
+        print(i)
         C = core[i]
         [Left, Foot, Right] = C.shape
         C = unfold(C,1)
@@ -30,7 +30,7 @@ def sitek(core):
 
         [Q,R] = np.linalg.qr(C, mode='reduced')
         # print(R.shape)
-        core[i] = np.reshape(Q,(R.shape[0], Foot, int(Q.size/(Foot*R.shape[0]))))
+        core[i] = np.reshape(Q,(R.shape[0], Right, int(Q.size/(Foot*R.shape[0]))))
         # print(core[i].shape)
         core[i-1] = mode_dot(core[i],R,3)
         K = i-1

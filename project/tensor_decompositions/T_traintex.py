@@ -6,16 +6,10 @@ import tensorly as ty
 
 
 def tensortrain(img, epsilon=0.1):
-    img = np.asarray(img)
-    print(img.shape)
-
-    img = np.reshape(img, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+    img = np.reshape(np.asarray(img), (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
     n = img.shape
-    print(n)
     d = len(n)
-
     delta = (epsilon / np.sqrt(d - 1)) * np.linalg.norm(img)
-
     r = np.zeros(d + 1)
     r[0] = 1
     r[-1] = 1
@@ -23,7 +17,6 @@ def tensortrain(img, epsilon=0.1):
     c = img.copy()
 
     for k in range(d - 1):
-
         m = int(r[k] * n[k])  # r_(k-1)*n_k
         b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
         c = np.reshape(c, [m, b])
@@ -32,7 +25,6 @@ def tensortrain(img, epsilon=0.1):
         S = np.diag(S)
         s = np.diagonal(S)
         s = np.reshape(s, (s.shape[0], 1))
-
         rank = 0
         error = np.linalg.norm(s[rank + 1])
         while error > delta:
@@ -94,10 +86,19 @@ def border(img, low, high, p=False):
                     highcount += 1
                     # print(B[x][y][z])
                     img[x][y][z] = 2* high - img[x][y][z]
-
-    print(lowcount,highcount)
-
+    # print(lowcount,highcount)
     return img
+
+def test(tensor, tt, epsilon, d, r, n):
+    error = np.linalg.norm(tt_reconstruction(tt, d, r, n) - tensor) / np.linalg.norm(tensor)
+    n = len(tt) - 1
+    normcheck = round((np.linalg.norm(tt[n]) - np.linalg.norm(tensor)) / np.linalg.norm(tensor))
+    if normcheck == 0 and error < epsilon:
+        print('goed gedaan tom en tex')
+    else:
+        print('slecht gedaan tom en tex')
+
+
 
 
 img2 = Image.open('baboon.png')
@@ -109,6 +110,7 @@ B = tt_reconstruction(core, d, r, n)
 B = border(np.array(B), 0, 255, p=True)
 
 new_image = Image.fromarray((B).astype(np.uint8), 'RGB')
-old_image = img
 
-compare(old_image, new_image)
+old_image = img
+# test(img,core,0.1, d, r, n)
+# compare(old_image, new_image)
