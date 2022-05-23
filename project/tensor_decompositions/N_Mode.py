@@ -1,13 +1,13 @@
 
-from T_traintex import tensortrain, tt_reconstruction
+from TT_SVD import tensortrain, tt_reconstruction
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy import linalg
 import numpy as np
 import tensorly as ty
 
-img = Image.open('dog.jpg')
-img2 = Image.open('baboon.png')
+img = Image.open('images/dog.jpg')
+img2 = Image.open('images/baboon.png')
 core, d, r, n = tensortrain(img)
 B = tt_reconstruction(core, d, r, n)
 # print(B.shape)
@@ -22,7 +22,6 @@ V = np.array([[1,2,3,4]])
 # print(Y.shape)
 
 def unfold(tensor, x):
-
     if x==1:
         tensor = tensor.transpose(1, 0, 2)
         shape = tensor.shape
