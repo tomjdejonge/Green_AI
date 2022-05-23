@@ -5,7 +5,8 @@ from scipy import linalg
 import matplotlib.pyplot as plt
 
 
-# Original file: T_train.py --------------------------------------------------------------------------------------------
+# Original file: T_train.py (method 1) ---------------------------------------------------------------------------------
+
 
 class TT(object):
 
@@ -33,7 +34,7 @@ class TT(object):
             else:
                 raise ValueError('List elements must be 4-dimensional arrays.')
 
-        # initialize from full array
+        # initialize from full array   
         elif isinstance(x, np.ndarray):
 
             # check if order of ndarray is a multiple of 2
@@ -146,18 +147,8 @@ def imshow(image):
     img.show()
 
 
-img_bab = np.array(Image.open('images/baboon.png'))
-# img_dog = np.array(Image.open('images/dog.jpg'))
-#
-# img1 = np.reshape(img_dog, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
-#
-# dog = TT.full(TT(img1, threshold=0.1))
-#
-# imshow(img_dog.astype(np.uint8))
-# imshow(dog.astype(np.uint8))
+# Original file: T_Traintex (method 2): --------------------------------------------------------------------------------
 
-
-# Original file: T_Traintex --------------------------------------------------------------------------------------------
 
 def tensortrain(img, epsilon=0.1):
     img = np.reshape(np.asarray(img), (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
@@ -244,7 +235,7 @@ def border(img, low, high, p=False):
     return img
 
 
-def test(tensor, tt, epsilon, d, r, n):
+def check(tensor, tt, epsilon, d, r, n):
     error = np.linalg.norm(tt_reconstruction(tt, d, r, n) - tensor) / np.linalg.norm(tensor)
     n = len(tt) - 1
     normcheck = round((np.linalg.norm(tt[n]) - np.linalg.norm(tensor)) / np.linalg.norm(tensor))
@@ -254,26 +245,8 @@ def test(tensor, tt, epsilon, d, r, n):
         print('slecht gedaan tom en tex')
 
 
-# img2 = Image.open('baboon.png')
-# img = Image.open('dog.jpg')
-#
-# core, d, r, n = tensortrain(img)
-# # print(core[-1])
-# # for i in range(len(core)-1):
-# #     print(i, 'aaa', core[i].shape)
-# #     print(linalg.norm(core[i]))
-#
-# B = tt_reconstruction(core, d, r, n)
-# B = border(np.array(B), 0, 255, p=True)
-#
-# new_image = Image.fromarray((B).astype(np.uint8), 'RGB')
-#
-# old_image = img
-# test(img,core,0.1, d, r, n)
-# compare(old_image, new_image)
+# Original file: test.py (method 3): -----------------------------------------------------------------------------------
 
-
-# Original file: test.py -----------------------------------------------------------------------------------------------
 
 def validate_tt_rank(tensor_shape, rank='same', constant_rank=False, rounding='round',
                      allow_overparametrization=True):
@@ -454,17 +427,68 @@ def tt_to_tensor(factors):
 
     return tl.reshape(full_tensor, full_shape)
 
-# img2 = Image.open('images/baboon.png')
-# img = Image.open('images/dog.jpg')
-# img = np.asarray(img)
-# img = np.reshape(img, (4,4,4,4,4,4,4,4,4,3))
-# core = tensor_train(img.astype(float),4)
-#
-# for i in range(len(core)):
-#     print(core[i].shape)
-# # B = tt_reconstruction(core, d,r,n)
-# # B = np.array(B)
-# B = tt_to_tensor(core)
-# B = np.reshape(B, (512,512,3))
-# new_image = Image.fromarray((B).astype(np.uint8),'RGB')
-# compare(new_image, new_image)
+def compare(image1, image2):
+    f = plt.figure()
+    f.add_subplot(1,2, 1)
+    plt.imshow(image1)
+    plt.axis('off')
+    f.add_subplot(1,2,2)
+    plt.imshow(image2)
+    plt.axis('off')
+    plt.show()
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Fil in used method here:
+method = 3
+# ----------------------------------------------------------------------------------------------------------------------
+
+def main():
+
+    if method == 1:
+# Using Original file T_train.py (method 1): ---------------------------------------------------------------------------
+
+        img_bab = np.array(Image.open('images/baboon.png'))
+        img_dog = np.array(Image.open('images/dog.jpg'))
+        img1 = np.reshape(img_dog, (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
+        dog = TT.full(TT(img1, threshold=0.1))
+        imshow(img_dog.astype(np.uint8))
+        imshow(dog.astype(np.uint8))
+
+
+    elif method == 2:
+# Using Original file: T_Traintex (method 2): --------------------------------------------------------------------------
+
+        img2 = Image.open('images/baboon.png')
+        img = Image.open('images/dog.jpg')
+        core, d, r, n = tensortrain(img)
+        # print(core[-1])
+        # for i in range(len(core)-1):
+        #     print(i, 'aaa', core[i].shape)
+        #     print(linalg.norm(core[i]))
+        B = tt_reconstruction(core, d, r, n)
+        B = border(np.array(B), 0, 255, p=True)
+        new_image = Image.fromarray((B).astype(np.uint8), 'RGB')
+        old_image = img
+        check(img, core, 0.1, d, r, n)
+        compare(old_image, new_image)
+
+
+    elif method == 3:
+# Using Original file: test.py (method 3): -----------------------------------------------------------------------------
+
+        img2 = Image.open('images/baboon.png')
+        img = Image.open('images/dog.jpg')
+        img = np.asarray(img)
+        img = np.reshape(img, (4,4,4,4,4,4,4,4,4,3))
+        core = tensor_train(img.astype(float),4)
+        for i in range(len(core)):
+            print(core[i].shape)
+        # B = tt_reconstruction(core, d,r,n)
+        # B = np.array(B)
+        B = tt_to_tensor(core)
+        B = np.reshape(B, (512,512,3))
+        new_image = Image.fromarray((B).astype(np.uint8),'RGB')
+        compare(new_image, new_image)
+
+if __name__ == "__main__":
+    main()

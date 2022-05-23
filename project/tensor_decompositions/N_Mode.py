@@ -1,5 +1,5 @@
 
-from TT_SVD import tensortrain, tt_reconstruction
+from Supporting_TT_SVD import tensortrain, tt_reconstruction
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy import linalg
@@ -108,4 +108,4 @@ def mode_dot(tensor, matrix_or_vector, mode):
 # print(unfold(Y,1).shape)
 #
 # print(unfold(Y,1).dot(A))
-# print(nmultiplication(Y, A, 1))
+print(nmultiplication(Y, A, 1))
