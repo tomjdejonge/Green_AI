@@ -38,7 +38,9 @@ def rightsupercore(tt,X,d):
     return Gright.transpose()
 
 def leftsupercore(tt,X,d):
+
     D = tt.shape
+    # print(D)
     r2,r1,L = tt[0].shape
     # print(r2,r1,L)
     Gleft = np.reshape(tt[0],(L,r2))
@@ -51,33 +53,55 @@ def leftsupercore(tt,X,d):
     Gleft = np.reshape(Gleft, (J,L*r3))
     Gleft = X.dot(Gleft)
     # print(Gleft.shape)
-    if d == 3:
+    if d == 2:
         return Gleft
-    for i in range(2,d-2):
-        print(i)
-        Ri1, Ri, J = tt.cores[i].shape
 
-    return None
+    for i in range(1,d-1):
+        # print(i)
+        Ri1, Ri, J = tt[i].shape
+        # print(Gleft.shape, X.shape, Ri1, Ri, J)
+        Gleft = linalg.khatri_rao(np.transpose(Gleft), X.transpose()).transpose()   # N x JLRi1
+        N, JLRi1 = Gleft.shape
+        L = JLRi1 // (J*Ri)
+        # print(f'L = {L}')
+        Gleft = np.reshape(Gleft, (N*L, J*Ri))   # N x JLRi1 ->  NL x JRi1
+        Ri2, Ri1, J = (tt[i+1]).shape
+        print(Ri1, J, Ri2)
+        temp = np.reshape(tt[i+1],(J*Ri1, Ri2))  # Ri1 x J x Ri2 -> JRi1 x Ri2
+        print(Gleft.shape, temp.shape)
+        Gleft = Gleft.dot(temp)  # N x LRi2
+        Gleft = np.reshape(Gleft, (N, L * Ri2))  # NL x Ri2 -> N x LRi2
 
+    if d == D:
+        return linalg.khatri_rao(Gleft, X)  # N x JLRd
+
+    return Gleft  # N x LRd
 
 def classifier2(X):
     return np.array([1, X, X**2, X**3])
 
-def classifier(dataset, feature):
+def featurespace(dataset, feature, p):
     # dataset = list(dataset)
-    res = np.zeros((150,4))
+
+    res = np.zeros((len(dataset),p))
+    # print(res.shape)
     flower = dataset.iloc[:,feature]
     for j in range(len(flower)):
         X = flower[j]
         Y = np.array([1, X, X**2, X**3])
-        res[j] = Y
 
+        res[j] = Y
     return res
 
-X = classifier(dataset,1)
+#datasplit
+
+X = featurespace(dataset,1,4)
 tt = initrandomtt(I = 4, r = 2)
 
 # print(rightsupercore(tt, X ,1).shape)
-leftsupercore(tt,X,0)
+# print(0, leftsupercore(tt,X,0).shape)
+# print(1, leftsupercore(tt,X,1).shape)
+# print(2, leftsupercore(tt,X,2).shape)
+print(3, leftsupercore(tt,X,3).shape)
 
 # Gright = reshape(tt.cores[i-1],(size(tt.cores[i-1])[1],prod(size(tt.cores[i-1])[2:3])))*Gright'
