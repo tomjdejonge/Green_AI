@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
+from scipy import linalg
 
 iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
 dataset = iris.iloc[:,[1,2,3,4]]
 
 
-def initrandomtt(I = 4, rank = 2):
+def initrandomtt2(I = 4, rank = 2):
     res = [[],[],[],[]]
     for i in range(1,len(res)-1):
         res[i] = np.array(np.random.rand(rank,rank,I))
@@ -15,45 +16,68 @@ def initrandomtt(I = 4, rank = 2):
 
     return res
 
+def initrandomtt(I=4, r=2):
+    res = np.array([np.random.rand(r,1,I,),np.random.rand(r,r,I),np.random.rand(r,r,I),np.random.rand(1,r,I)],dtype=object)
 
-# for i in range(len(initrandomtt(iris.size))):
-#     print(i,initrandomtt(iris.size)[i])
-# print(initrandomtt(iris.size))
+    return res
 
 def rightsupercore(tt,X,d):
-    tt = np.array(tt)
-    X = np.array(X)
+
     D = len(tt)-1
     a = np.arange(d+2, D+1, 1).tolist()[::-1]
-    # print(tt[D].shape, X.shape)
-    Gright = tt[D]*X
+    Gright = np.dot(np.reshape(tt[D],(tt[D].shape[1:3])),X.transpose()) # eerste
 
-    print('start',Gright.shape)
     for i in a:
-        print(i, Gright.shape)
-        b = np.reshape(np.matrix.flatten(Gright), (1,8))
-        Gright = np.kron(b,X)
-        Gright = np.reshape(Gright, (4,8))
-        # print(Gright.shape)
-        # print([(tt[i-1]).shape[0],np.prod((tt[i-1].shape[1:2]))])
-        print((np.prod(tt[i-1].shape[1:3])))
-        Gright = np.reshape(tt[i-1], ((tt[i-1]).shape[1],np.prod((tt[i-1].shape[1:3])))).dot(Gright.transpose())
+        Gright = linalg.khatri_rao(np.reshape(Gright,(2,150)),X.transpose())  # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+        Gright = np.reshape(tt[i-1], ((tt[i-1]).shape[1],np.prod((tt[i-1].shape[1:3])))).dot(Gright) # laatste
 
-         # Gright = reshape(tt.cores[i - 1], (size(tt.cores[i - 1])[1], prod(size(tt.cores[i - 1])[2:3]))) * Gright ' #Ri-1 x JRi * JRi x N -> Ri-1 x N
     if d ==0:
         return Gright
-    Gright = np.kron(Gright,X)
-    return Gright.tranpsose()
+    else:
+        Gright = linalg.khatri_rao(Gright,X.transpose())
+    return Gright.transpose()
 
-# X = [1,x,x**2,x**3]
+def leftsupercore(tt,X,d):
+    D = tt.shape
+    r2,r1,L = tt[0].shape
+    # print(r2,r1,L)
+    Gleft = np.reshape(tt[0],(L,r2))
+    # print(Gleft.shape)
+    N = X.size
+    if d == 1:
+        return Gleft
+    r3,r2,J = tt[1].shape
+    Gleft = Gleft.dot(np.reshape(tt[2],(r2,J*r3)))
+    Gleft = np.reshape(Gleft, (J,L*r3))
+    Gleft = X.dot(Gleft)
+    # print(Gleft.shape)
+    if d == 3:
+        return Gleft
+    for i in range(2,d-2):
+        print(i)
+        Ri1, Ri, J = tt.cores[i].shape
 
-def classifier(X):
-    return [1, X, X**2, X**3]
+    return None
 
-X = classifier(0.1)
-tt = initrandomtt(I = 4, rank = 2)
 
-rightsupercore(tt, X ,0)
+def classifier2(X):
+    return np.array([1, X, X**2, X**3])
 
+def classifier(dataset, feature):
+    # dataset = list(dataset)
+    res = np.zeros((150,4))
+    flower = dataset.iloc[:,feature]
+    for j in range(len(flower)):
+        X = flower[j]
+        Y = np.array([1, X, X**2, X**3])
+        res[j] = Y
+
+    return res
+
+X = classifier(dataset,1)
+tt = initrandomtt(I = 4, r = 2)
+
+# print(rightsupercore(tt, X ,1).shape)
+leftsupercore(tt,X,0)
 
 # Gright = reshape(tt.cores[i-1],(size(tt.cores[i-1])[1],prod(size(tt.cores[i-1])[2:3])))*Gright'
