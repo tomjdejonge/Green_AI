@@ -1,5 +1,5 @@
 
-from Supporting_TT_SVD import tensortrain, tt_reconstruction
+from TT_SVD import tensortrain, tt_reconstruction
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy import linalg
