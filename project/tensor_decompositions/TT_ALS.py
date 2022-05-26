@@ -21,7 +21,7 @@ def initrandomtt(I=4, r=2):
 
     return res
 
-def rightsupercore(tt,X,d):
+def rightSuperCore(tt,X,d):
 
     D = len(tt)-1
     a = np.arange(d+2, D+1, 1).tolist()[::-1]
@@ -35,16 +35,17 @@ def rightsupercore(tt,X,d):
         return Gright
     else:
         Gright = linalg.khatri_rao(Gright,X.transpose())
-    return Gright.transpose()
+    return (Gright.transpose())
 
-def leftsupercore(tt,X,d):
+def leftSuperCore(tt,X,d):
 
-    D = tt.shape
-    # print(D)
+    D = len(tt)-1
+    # print(f'D = {D}')
+
     r2,r1,L = tt[0].shape
-    # print(r2,r1,L)
+
     Gleft = np.reshape(tt[0],(L,r2))
-    # print(Gleft.shape)
+
     N = X.size
     if d == 1:
         return Gleft
@@ -52,27 +53,29 @@ def leftsupercore(tt,X,d):
     Gleft = Gleft.dot(np.reshape(tt[2],(r2,J*r3)))
     Gleft = np.reshape(Gleft, (J,L*r3))
     Gleft = X.dot(Gleft)
-    # print(Gleft.shape)
+
     if d == 2:
+        # print(f'Gleft = {Gleft.shape, L, r3}')
         return Gleft
 
     for i in range(1,d-1):
         # print(i)
         Ri1, Ri, J = tt[i].shape
-        # print(Gleft.shape, X.shape, Ri1, Ri, J)
+
         Gleft = linalg.khatri_rao(np.transpose(Gleft), X.transpose()).transpose()   # N x JLRi1
         N, JLRi1 = Gleft.shape
         L = JLRi1 // (J*Ri)
-        # print(f'L = {L}')
+
         Gleft = np.reshape(Gleft, (N*L, J*Ri))   # N x JLRi1 ->  NL x JRi1
         Ri2, Ri1, J = (tt[i+1]).shape
-        print(Ri1, J, Ri2)
+
         temp = np.reshape(tt[i+1],(J*Ri1, Ri2))  # Ri1 x J x Ri2 -> JRi1 x Ri2
-        print(Gleft.shape, temp.shape)
+
         Gleft = Gleft.dot(temp)  # N x LRi2
         Gleft = np.reshape(Gleft, (N, L * Ri2))  # NL x Ri2 -> N x LRi2
 
     if d == D:
+        print(f'Gleft = {Gleft.shape,N,J,L}')
         return linalg.khatri_rao(Gleft, X)  # N x JLRd
 
     return Gleft  # N x LRd
@@ -93,15 +96,52 @@ def featurespace(dataset, feature, p):
         res[j] = Y
     return res
 
+def getUL(tt, X, d):
+        D = len(tt)-1
+        N = X.shape[0]
+        R2,R1,L = tt[0].shape
+        Rd1,Rd,J = tt[d].shape
+        print(R2,R1,L)
+        print(Rd1,Rd,J)
+
+        # print(R1,L,R2,N)
+        if d == 0:
+            Gright = rightSuperCore(tt, X, d) # R2 x N
+            Gleft = np.ones((L,L)) #L x L
+            superCore = np.kron(Gright,Gleft) # R2 x N kron L x L -> LR2 x L N
+
+            return np.reshape(superCore, (N*L, L*R2)) # NL x LR2
+
+        elif d == 1:
+            Gleft = leftSuperCore(tt, X, d)  # L x R2
+            Gright = rightSuperCore(tt, X, d)  # J R3 x N
+            JR3, N = Gright.shape
+            superCore = np.kron(Gright, Gleft.transpose()) # JR3 x N kron R2 x L -> R2JR3 x LN
+
+            return np.reshape(superCore, (N*L, R2*JR3))  # NL x R2JR3
+
+        elif d==D:
+            Gleft = leftSuperCore(tt, X, d)  # N x JLRd
+            print(Gleft.shape, N, J*L*Rd)
+            return np.reshape(Gleft, (N*L, J*Rd))  # NL x J*Rd
+
+        else:
+            Gright = rightSuperCore(tt, X, d)  # Rd1 x N
+            Gleft = leftSuperCore(tt, X, d)  # N x JLRd
+            print(Gright.shape, Gleft.shape, Rd1, N, J * L * Rd)
+
+        # superCore = np.kron((Gright.flatten()),Gleft) # N x L Rd J Rd1
+
+        superCore = np.reshape(superCore, (N * L, Rd * J * Rd1)) # N L x Rd J Rd1
+
+        return superCore  # N L x Rd J Rd1
+
+
 #datasplit
 
 X = featurespace(dataset,1,4)
 tt = initrandomtt(I = 4, r = 2)
 
-# print(rightsupercore(tt, X ,1).shape)
-# print(0, leftsupercore(tt,X,0).shape)
-# print(1, leftsupercore(tt,X,1).shape)
-# print(2, leftsupercore(tt,X,2).shape)
-print(3, leftsupercore(tt,X,3).shape)
+getUL(tt, X, 3)
 
 # Gright = reshape(tt.cores[i-1],(size(tt.cores[i-1])[1],prod(size(tt.cores[i-1])[2:3])))*Gright'
