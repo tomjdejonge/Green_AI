@@ -35,6 +35,7 @@ def rightSuperCore(tt,X,d):
         return Gright
     else:
         Gright = linalg.khatri_rao(Gright,X.transpose())
+        # print(f'right = {Gright.shape, }')
     return (Gright.transpose())
 
 def leftSuperCore(tt,X,d):
@@ -75,8 +76,9 @@ def leftSuperCore(tt,X,d):
         Gleft = np.reshape(Gleft, (N, L * Ri2))  # NL x Ri2 -> N x LRi2
 
     if d == D:
-        print(f'Gleft = {Gleft.shape,N,J,L}')
-        return linalg.khatri_rao(Gleft, X)  # N x JLRd
+        # print(f'Gleft = {Gleft.shape, X.shape, N,J,L}')
+        # print(linalg.khatri_rao(Gleft.transpose(), X.transpose()).shape)
+        return linalg.khatri_rao(Gleft.transpose(), X.transpose()).transpose()  # N x JLRd
 
     return Gleft  # N x LRd
 
@@ -101,8 +103,8 @@ def getUL(tt, X, d):
         N = X.shape[0]
         R2,R1,L = tt[0].shape
         Rd1,Rd,J = tt[d].shape
-        print(R2,R1,L)
-        print(Rd1,Rd,J)
+        # print(R2,R1,L)
+        # print(Rd1,Rd,J)
 
         # print(R1,L,R2,N)
         if d == 0:
@@ -122,19 +124,18 @@ def getUL(tt, X, d):
 
         elif d==D:
             Gleft = leftSuperCore(tt, X, d)  # N x JLRd
-            print(Gleft.shape, N, J*L*Rd)
+            # print(Gleft.shape, N, J*L*Rd)
             return np.reshape(Gleft, (N*L, J*Rd))  # NL x J*Rd
 
         else:
             Gright = rightSuperCore(tt, X, d)  # Rd1 x N
             Gleft = leftSuperCore(tt, X, d)  # N x JLRd
-            print(Gright.shape, Gleft.shape, Rd1, N, J * L * Rd)
+            # print(Gright.shape, Gleft.shape, [Rd1, N], [N,J * L * Rd])
 
         # superCore = np.kron((Gright.flatten()),Gleft) # N x L Rd J Rd1
+        superCore = linalg.khatri_rao(Gright.transpose(),Gleft.transpose())
 
-        superCore = np.reshape(superCore, (N * L, Rd * J * Rd1)) # N L x Rd J Rd1
-
-        return superCore  # N L x Rd J Rd1
+        return np.reshape(superCore, (N * L, Rd * J * Rd1)) # N L x Rd J Rd1
 
 
 #datasplit
@@ -142,6 +143,9 @@ def getUL(tt, X, d):
 X = featurespace(dataset,1,4)
 tt = initrandomtt(I = 4, r = 2)
 
+getUL(tt, X, 0)
+getUL(tt, X, 1)
+getUL(tt, X, 2)
 getUL(tt, X, 3)
 
 # Gright = reshape(tt.cores[i-1],(size(tt.cores[i-1])[1],prod(size(tt.cores[i-1])[2:3])))*Gright'
