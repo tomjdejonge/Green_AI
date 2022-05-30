@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 from scipy import linalg
+from sklearn.model_selection import train_test_split
 
 iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
-dataset = iris.iloc[:,[1,2,3,4]]
+dataset = iris.iloc[:,[1,2,3,4,5]]
+# print(dataset)
 
 def initrandomtt(J=4, r=2):
     res = np.array([np.random.rand(r,1,J),np.random.rand(r,r,J),np.random.rand(r,r,J),np.random.rand(1,r,J)],dtype=object)
@@ -17,7 +19,7 @@ def rightSuperCore(tt,X,d):
     Gright = np.dot(np.reshape(tt[D],(tt[D].shape[1:3])),X.transpose()) # eerste
 
     for i in a:
-        Gright = linalg.khatri_rao(np.reshape(Gright,(2,150)),X.transpose())  # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+        Gright = linalg.khatri_rao(np.reshape(Gright,(2,len(X))),X.transpose())  # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
         Gright = np.reshape(tt[i-1], ((tt[i-1]).shape[1],np.prod((tt[i-1].shape[1:3])))).dot(Gright) # laatste
 
     if d ==0:
@@ -121,32 +123,24 @@ def updateCore(tt,mpt0,X,d,y):
         L = 1
     # print(f'update {d}')
     U = getUL(tt,X,d,L)                           #case d=1: NL x JLR2, case d!=1 Nl x RdJRd1
-    # y = (y[d]).flatten()
-    # print(y[0])
-    # UTy = U.dot(np.reshape(y, (U.shape[1],int(len(y)//U.shape[1]))))  # case d=1: JLR2, case d!=1 RdJRd1
-    UTy = U.dot(y[d].flatten())
+  # case d=1: JLR2, case d!=1 RdJRd1
+    UTy = U.transpose().dot(y.flatten())
     UTU = U.transpose().dot(U)                                         #case d=1: JLR2x JLR2, case d!=1 RdJRd1 RdJRd1
 
-
-    # Pnew = P0inv[d] +(UTU//s**2)                                        #case d=1: JLR2x JLR2, case d!=1 RdJRd1 RdJRd1
-    # print(f'U.shape = {U.shape}, flat(y).shape = {len(y)}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, Pnew.shape = {1}')
-    # mnew = np.linalg.pinv(Pnew).dot(UTy)
-
-    w = np.linalg.pinv(U).dot(UTy)
+    w = np.linalg.pinv(UTU).dot(y)
     # print(f'pi) = {w.shape}')
     return w
 
 def tt_ALS(tt,X,y,iter):
     D= len(tt)-1
-    print(D)
+
     mpt = tt.copy()
     swipe = [0,1,2,3,2,1]
     # print(swipe)
     dims = []
     for i in range(len(tt)):
         dims.append(tt[i].shape)
-    print(dims)
-    P = np.arange(0,D)
+
     for i in range(0,iter):
         for j in range(len(swipe)):
             d = swipe[j]
@@ -168,34 +162,55 @@ def flat(array):
                 for l in range(array[i].shape[2]):
                     res.append(array[i][j][k][l])
     return res
-#datasplit
-
 
 def featurespace(dataset, feature, p):
     # dataset = list(dataset)
-    print(1)
+    # print(1)
     res = np.zeros((len(dataset),p))
     # print(res.shape)
     flower = dataset.iloc[:,feature]
+    flower = list(flower)
     for j in range(len(flower)):
         X = flower[j]
-        print(X)
         Y = np.array([1, X, X**2, X**3])
 
         res[j] = Y
     return res
 
+def hussel(dataset):
+    train, test = train_test_split(dataset,test_size=0.33)
+    return train,test
 
-X = featurespace(dataset,1,4)
-print(X)
+def setupy(dataset):
+    uv = dataset.iloc[:,-1].nunique()
+    res = np.zeros((len(dataset), uv))
+    # print(res.shape)
+    flower = dataset.iloc[:, -1]
+    # print(flower)
+    flower = list(flower)
+    for j in range(len(flower)):
+        X = flower[j]
+        if X == 'Iris-setosa':
+            res[j] = [1,0,0]
+        if X == 'Iris-versicolor':
+            res[j] = [0,1,0]
+        if X == 'Iris-virginica':
+            res[j] = [0,0,1]
+    return res
+
+
+
+train, test = hussel(dataset)
+X = featurespace(train,0,4)
+
+y = setupy(train)
 tt = initrandomtt(J = 4, r = 2)
-# print(X[0])
 
-print(getUL(tt, X, 0, 3).shape)
+# print(getUL(tt, X, 0, 3).shape)
 # print(getUL(tt, X, 1, 3).shape)
 # print(getUL(tt, X, 2, 3).shape)
 # print(getUL(tt, X, 3, 3).shape)
-y = tt.copy()
+
 # P0inv = np.arange(0,8)
 
 # print(y.type)
