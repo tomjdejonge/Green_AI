@@ -14,57 +14,60 @@ def initrandomtt(J, r):
 
 def rightSuperCore(tt,X,d):
     R = 2
-    I = X.shape[1]
+    I = X[d].shape[1]
     D = len(tt)-1
     L = 1
-    N = X.shape[0]
+    N = X[d].shape[0]
 
     D = len(tt)-1
     a = np.arange(d+2, D+1, 1).tolist()[::-1]
+
     # print(f'tt[{D}] = {tt[D].shape}')
-    Gright = np.dot(np.reshape(tt[D],(R,J)),X.transpose())            #X4                         # eerste
-    # print(f'a = {a}')
+    Gright = np.dot(np.reshape(tt[D],(R,J)),X[D].transpose())            #X4                         # eerste
+    print(f'a = {d, a}')
     for i in a:
-        Gright = linalg.khatri_rao(Gright,X.transpose())         #Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+
+        Gright = linalg.khatri_rao(Gright,X[i-1].transpose())         #Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
         Gright = np.reshape(tt[i-1],(R,R*I)).dot(Gright)
         # Gright = np.reshape(tt[i-1], ((tt[i-1]).shape[1],np.prod((tt[i-1].shape[1:3])))).dot(Gright)        # laatste
 
 
     if d ==0:
+
         return Gright
     else:
-        Gright = linalg.khatri_rao(Gright,X.transpose())  #X[d]
+        Gright = linalg.khatri_rao(Gright,X[d].transpose())  #X[d]
         # print(f'right = {Gright.shape, }')
     return (Gright.transpose())
 
 def leftSuperCore(tt,X,d):
     R = 2
-    I = X.shape[1]
+    I = X[d].shape[1]
     D = len(tt)-1
     L = 1
-    N = X.shape[0]
+    N = X[d].shape[0]
     # print(f'D = {D}')
 
     Gleft = np.reshape(tt[0],(R,I))
     if d == 1:
         # print(Gleft.shape, X.shape)
         # print(f'dot = {Gleft.dot(X.transpose()).shape}')
-        Gleft = Gleft.dot(X.transpose())
+        Gleft = Gleft.dot(X[d].transpose())
 
         return Gleft.transpose()
 
     if d== 2:
 
         # print(f'Gleft,x = {Gleft.shape, X.shape}')
-        Gleft = linalg.khatri_rao(Gleft,X)
+        Gleft = linalg.khatri_rao(Gleft,X[d])
         Gleft = np.reshape(Gleft,(N,I*R))
         Gleft = Gleft.dot(np.reshape(tt[d],(I*R,R)))
         return np.reshape(Gleft, (N, R))
 
     for i in range(1,d-1):
         # print(i)
-        print(Gleft.shape, X.shape)
-        Gleft = linalg.khatri_rao(Gleft, X).transpose()   # N x JLRi1
+        # print(Gleft.shape, X.shape)
+        Gleft = linalg.khatri_rao(Gleft, X[d]).transpose()   # N x JLRi1
 
 
 
@@ -79,24 +82,24 @@ def leftSuperCore(tt,X,d):
     if d == D:
         # print(f'Gleft = {Gleft.shape, X.shape, N,J,L}')
         # print(linalg.khatri_rao(Gleft.transpose(), X.transpose()).shape)
-        return linalg.khatri_rao(Gleft.transpose(), X.transpose()).transpose()  #X[d] # N x JLRd
+        return linalg.khatri_rao(Gleft.transpose(), X[d].transpose()).transpose()  #X[d] # N x JLRd
 
     return Gleft  # N x LRd
 
 def getUL(tt, X, d, L):
     R = 2
-    I = X.shape[1]
+    I = X[d].shape[1]
     D = len(tt)-1
     L = 1
     D = len(tt)-1
     # print(L)
-    N = X.shape[0]
+    N = X[d].shape[0]
 
     if d == 0:
         Gright = rightSuperCore(tt, X, d) # R2 x N
         Gleft = np.ones((L,L)) #L x L
-        superCore = linalg.khatri_rao(Gright,X.transpose())     #X1
-        print(superCore.shape)
+        superCore = linalg.khatri_rao(Gright,X[0].transpose())     #X1
+        # print(superCore.shape)
         return np.reshape(superCore, (N*L, I*R)) # NL x LR2
 
     elif d == 1:
@@ -175,7 +178,7 @@ def flat(array):
                     res.append(array[i][j][k][l])
     return res
 
-def featurespace(dataset, feature, p):
+def featurespace1(dataset, feature, p):
     cnames = dataset.columns.values
     res = np.zeros((len(dataset),p))
 
@@ -190,20 +193,19 @@ def featurespace(dataset, feature, p):
             res[j] = Y
     return res
 
-def featurespace1(dataset, feature, p):
+def featurespace(dataset, p):
     cnames = dataset.columns.values
-    res = np.zeros(len(cnames),(len(dataset),p))
+    res = [[[0 for _ in range(len(cnames))] for _ in range(len(dataset))] for _ in range(p)]
 
 
-    flower = dataset.iloc[:,feature]
-    flower = list(flower)
-    for i in cnames:
-        for j in range(len(flower)):
-
+    for i in range(len(cnames)-1):
+        for j in range(len(dataset)):
+            print(i,j)
+            flower = list(dataset.iloc[:, i])
             X = flower[j]
             Y = np.array([X**i for i in range(p)])
-            res[j] = Y
-    return res
+            res[i][j] = Y
+    return np.asarray(res)
 
 def hussel(dataset):
     train, test = train_test_split(dataset,test_size=0.33)
@@ -219,6 +221,7 @@ def setupy(dset):
         k = np.zeros(len(uv))
         k[uv.index(flower[j])] = 1
         res[j] = k
+
     return res
 
 def yspace(dset):
@@ -236,7 +239,8 @@ feature = 0
 iter = 3
 
 train, test = hussel(dataset)
-X = featurespace(train,feature,J)
+X = featurespace(train,J)
+# print(featurespace1(dataset,feature,J))
 
 y = yspace(train)
 
