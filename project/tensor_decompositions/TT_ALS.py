@@ -7,102 +7,111 @@ iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decomposi
 dataset = iris.iloc[:,[1,2,3,4,5]]
 # print(dataset)
 
-def initrandomtt(J=4, r=2):
+def initrandomtt(J, r):
     res = np.array([np.random.rand(r,1,J),np.random.rand(r,r,J),np.random.rand(r,r,J),np.random.rand(1,r,J)],dtype=object)
 
     return res
 
 def rightSuperCore(tt,X,d):
+    R = 2
+    I = X.shape[1]
+    D = len(tt)-1
+    L = 1
+    N = X.shape[0]
 
     D = len(tt)-1
     a = np.arange(d+2, D+1, 1).tolist()[::-1]
-    Gright = np.dot(np.reshape(tt[D],(tt[D].shape[1:3])),X.transpose()) # eerste
-
+    # print(f'tt[{D}] = {tt[D].shape}')
+    Gright = np.dot(np.reshape(tt[D],(R,J)),X.transpose())            #X4                         # eerste
+    # print(f'a = {a}')
     for i in a:
-        Gright = linalg.khatri_rao(np.reshape(Gright,(2,len(X))),X.transpose())  # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
-        Gright = np.reshape(tt[i-1], ((tt[i-1]).shape[1],np.prod((tt[i-1].shape[1:3])))).dot(Gright) # laatste
+        Gright = linalg.khatri_rao(Gright,X.transpose())         #Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+        Gright = np.reshape(tt[i-1],(R,R*I)).dot(Gright)
+        # Gright = np.reshape(tt[i-1], ((tt[i-1]).shape[1],np.prod((tt[i-1].shape[1:3])))).dot(Gright)        # laatste
+
 
     if d ==0:
         return Gright
     else:
-        Gright = linalg.khatri_rao(Gright,X.transpose())
+        Gright = linalg.khatri_rao(Gright,X.transpose())  #X[d]
         # print(f'right = {Gright.shape, }')
     return (Gright.transpose())
 
 def leftSuperCore(tt,X,d):
-
+    R = 2
+    I = X.shape[1]
     D = len(tt)-1
+    L = 1
+    N = X.shape[0]
     # print(f'D = {D}')
 
-    r2,r1,L = tt[0].shape
-
-    Gleft = np.reshape(tt[0],(L,r2))
-
-    N = X.size
+    Gleft = np.reshape(tt[0],(R,I))
     if d == 1:
-        return Gleft
-    r3,r2,J = tt[1].shape
-    Gleft = Gleft.dot(np.reshape(tt[2],(r2,J*r3)))
-    Gleft = np.reshape(Gleft, (J,L*r3))
-    Gleft = X.dot(Gleft)
+        # print(Gleft.shape, X.shape)
+        # print(f'dot = {Gleft.dot(X.transpose()).shape}')
+        Gleft = Gleft.dot(X.transpose())
 
-    if d == 2:
-        # print(f'Gleft = {Gleft.shape, L, r3}')
-        return Gleft
+        return Gleft.transpose()
+
+    if d== 2:
+
+        # print(f'Gleft,x = {Gleft.shape, X.shape}')
+        Gleft = linalg.khatri_rao(Gleft,X)
+        Gleft = np.reshape(Gleft,(N,I*R))
+        Gleft = Gleft.dot(np.reshape(tt[d],(I*R,R)))
+        return np.reshape(Gleft, (N, R))
 
     for i in range(1,d-1):
         # print(i)
-        Ri1, Ri, J = tt[i].shape
+        print(Gleft.shape, X.shape)
+        Gleft = linalg.khatri_rao(Gleft, X).transpose()   # N x JLRi1
 
-        Gleft = linalg.khatri_rao(np.transpose(Gleft), X.transpose()).transpose()   # N x JLRi1
-        N, JLRi1 = Gleft.shape
-        L = JLRi1 // (J*Ri)
 
-        Gleft = np.reshape(Gleft, (N*L, J*Ri))   # N x JLRi1 ->  NL x JRi1
+
+        Gleft = np.reshape(Gleft, (N*L, I*R))   # N x JLRi1 ->  NL x JRi1
         Ri2, Ri1, J = (tt[i+1]).shape
 
-        temp = np.reshape(tt[i+1],(J*Ri1, Ri2))  # Ri1 x J x Ri2 -> JRi1 x Ri2
+        temp = np.reshape(tt[i+1],(I*R, R))  # Ri1 x J x Ri2 -> JRi1 x Ri2
 
         Gleft = Gleft.dot(temp)  # N x LRi2
-        Gleft = np.reshape(Gleft, (N, L * Ri2))  # NL x Ri2 -> N x LRi2
+        Gleft = np.reshape(Gleft, (N, L * R))  # NL x Ri2 -> N x LRi2
 
     if d == D:
         # print(f'Gleft = {Gleft.shape, X.shape, N,J,L}')
         # print(linalg.khatri_rao(Gleft.transpose(), X.transpose()).shape)
-        return linalg.khatri_rao(Gleft.transpose(), X.transpose()).transpose()  # N x JLRd
+        return linalg.khatri_rao(Gleft.transpose(), X.transpose()).transpose()  #X[d] # N x JLRd
 
     return Gleft  # N x LRd
 
 def getUL(tt, X, d, L):
+    R = 2
+    I = X.shape[1]
+    D = len(tt)-1
+    L = 1
     D = len(tt)-1
     # print(L)
     N = X.shape[0]
-    R2,R1,L = tt[0].shape
-    Rd1,Rd,J = tt[d].shape
-    # print(L)
-    # print(R2,R1,L)
-    # print(Rd1,Rd,J)
 
-    # print(R1,L,R2,N)
     if d == 0:
         Gright = rightSuperCore(tt, X, d) # R2 x N
         Gleft = np.ones((L,L)) #L x L
-        superCore = np.kron(Gright,Gleft) # R2 x N kron L x L -> LR2 x L N
-
-        return np.reshape(superCore, (N*L, L*R2)) # NL x LR2
+        superCore = linalg.khatri_rao(Gright,X.transpose())     #X1
+        print(superCore.shape)
+        return np.reshape(superCore, (N*L, I*R)) # NL x LR2
 
     elif d == 1:
         Gleft = leftSuperCore(tt, X, d)  # L x R2
         Gright = rightSuperCore(tt, X, d).transpose()  # J R3 x N
-        JR3, N = Gright.shape
-        superCore = np.kron(Gright, Gleft.transpose()) # JR3 x N kron R2 x L -> R2JR3 x LN
+        # print(f'Gleft.shape = {Gleft.shape}, Gright.shape = {Gright.shape}')
+
+        superCore = linalg.khatri_rao(Gright, Gleft.transpose()) # JR3 x N kron R2 x L -> R2JR3 x LN
         # print(f'shape = {(N,L, R2*JR3)}')
-        return np.reshape(superCore, (N*L, R2*JR3))  # NL x R2JR3
+        return np.reshape(superCore, (N, R*I*R))  # NL x R2JR3
 
     elif d==D:
         Gleft = leftSuperCore(tt, X, d)  # N x JLRd
         # print(Gleft.shape, N, J*L*Rd)
-        return np.reshape(Gleft, (N*L, J*Rd))  # NL x J*Rd
+        return np.reshape(Gleft, (N, J*R))  # NL x J*Rd
 
     else:
         Gright = rightSuperCore(tt, X, d)  # Rd1 x N
@@ -112,7 +121,7 @@ def getUL(tt, X, d, L):
     # superCore = np.kron((Gright.flatten()),Gleft) # N x L Rd J Rd1
     superCore = linalg.khatri_rao(Gright.transpose(),Gleft.transpose())
 
-    return np.reshape(superCore, (N * L, Rd * J * Rd1)) # N L x Rd J Rd1
+    return np.reshape(superCore, (N * L, R * J * R)) # N L x Rd J Rd1
 
 def updateCore(tt,mpt0,X,d,y):
     if isinstance(y, np.ndarray):
@@ -124,16 +133,19 @@ def updateCore(tt,mpt0,X,d,y):
     # print(f'update {d}')
     U = getUL(tt,X,d,L)                           #case d=1: NL x JLR2, case d!=1 Nl x RdJRd1
   # case d=1: JLR2, case d!=1 RdJRd1
-    UTy = U.transpose().dot(y.flatten())
-    UTU = U.transpose().dot(U)                                         #case d=1: JLR2x JLR2, case d!=1 RdJRd1 RdJRd1
+    y = np.reshape(y, (100,1))
+    UTy = U.transpose().dot(y)
 
-    w = np.linalg.pinv(UTU).dot(y)
+    # UTy = linalg.khatri_rao(U.transpose(),y)
+    UTU = U.transpose().dot(U)                                         #case d=1: JLR2x JLR2, case d!=1 RdJRd1 RdJRd1
+    # print(UTU.dot(UTy).shape)
+    w = np.linalg.pinv(UTU).dot(UTy)
     # print(f'pi) = {w.shape}')
+    print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape} ')
     return w
 
 def tt_ALS(tt,X,y,iter):
     D= len(tt)-1
-
     mpt = tt.copy()
     swipe = [0,1,2,3,2,1]
     # print(swipe)
@@ -148,7 +160,7 @@ def tt_ALS(tt,X,y,iter):
             # print(i, j)
             newCore = updateCore(tt,mpt,X,d,y)
             mpt[d] = np.reshape(newCore,dims[d])
-            # print(f'in iteration{i,j}, tt[{d}].shape = {tt[d].shape}, P[{d}].shape = {P[d].shape}')
+            # print(f'in iteration{i,j}, tt[{d}].shape = {tt[d].shape}, mpt[{d}].shape = {mpt[d].shape}')
 
     return mpt
 
@@ -164,58 +176,76 @@ def flat(array):
     return res
 
 def featurespace(dataset, feature, p):
-    # dataset = list(dataset)
-    # print(1)
+    cnames = dataset.columns.values
     res = np.zeros((len(dataset),p))
-    # print(res.shape)
+
+
     flower = dataset.iloc[:,feature]
     flower = list(flower)
-    for j in range(len(flower)):
-        X = flower[j]
-        Y = np.array([1, X, X**2, X**3])
+    for i in cnames:
+        for j in range(len(flower)):
 
-        res[j] = Y
+            X = flower[j]
+            Y = np.array([X**i for i in range(p)])
+            res[j] = Y
+    return res
+
+def featurespace1(dataset, feature, p):
+    cnames = dataset.columns.values
+    res = np.zeros(len(cnames),(len(dataset),p))
+
+
+    flower = dataset.iloc[:,feature]
+    flower = list(flower)
+    for i in cnames:
+        for j in range(len(flower)):
+
+            X = flower[j]
+            Y = np.array([X**i for i in range(p)])
+            res[j] = Y
     return res
 
 def hussel(dataset):
     train, test = train_test_split(dataset,test_size=0.33)
     return train,test
 
-def setupy(dataset):
-    uv = dataset.iloc[:,-1].nunique()
-    res = np.zeros((len(dataset), uv))
-    # print(res.shape)
-    flower = dataset.iloc[:, -1]
-    # print(flower)
-    flower = list(flower)
+def setupy(dset):
+    uv = list(dataset.iloc[:,-1].unique())
+    res = np.zeros((len(dset), len(uv)))
+    # res = np.zeros(len(dataset))
+    flower = list(dset.iloc[:, -1])
+
     for j in range(len(flower)):
-        X = flower[j]
-        if X == 'Iris-setosa':
-            res[j] = [1,0,0]
-        if X == 'Iris-versicolor':
-            res[j] = [0,1,0]
-        if X == 'Iris-virginica':
-            res[j] = [0,0,1]
+        k = np.zeros(len(uv))
+        k[uv.index(flower[j])] = 1
+        res[j] = k
     return res
 
+def yspace(dset):
+    res = np.zeros((len(dset),1))
+    uv = list(dataset.iloc[:,-1].unique())
+    # res = np.zeros(len(dataset))
+    flower = list(dset.iloc[:, -1])
+    for j in range(len(flower)):
+        res[j] = uv.index(flower[j])
+    return res
 
+#variables:
+J = 4 #nauwkeurigheid
+feature = 0
+iter = 3
 
 train, test = hussel(dataset)
-X = featurespace(train,0,4)
+X = featurespace(train,feature,J)
 
-y = setupy(train)
-tt = initrandomtt(J = 4, r = 2)
+y = yspace(train)
 
-# print(getUL(tt, X, 0, 3).shape)
-# print(getUL(tt, X, 1, 3).shape)
-# print(getUL(tt, X, 2, 3).shape)
-# print(getUL(tt, X, 3, 3).shape)
+# print(y)
+tt = initrandomtt(J, r=2)
 
-# P0inv = np.arange(0,8)
 
-# print(y.type)
 
-print(f'nieuw = {tt_ALS(tt,X,y,3)}')
+print(tt_ALS(tt,X,y,iter))
 print(f'oud = {tt}')
 
 # print(flat(y))
