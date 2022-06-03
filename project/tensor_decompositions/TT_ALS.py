@@ -22,22 +22,35 @@ def rightSuperCore(tt,X,d):
     D = len(tt)-1
     a = np.arange(d+2, D+1, 1).tolist()[::-1]
 
-    # print(f'tt[{D}] = {tt[D].shape}')
-    Gright = np.dot(np.reshape(tt[D],(R,I)),X[D].transpose())            #X4                         # eerste
-    print(f'a = {d, a}')
-    for i in a:
 
-        Gright = linalg.khatri_rao(Gright,X[i-1].transpose())         #Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
-        Gright = np.reshape(tt[i-1],(R,R*I)).dot(Gright)
+    Gright = np.dot(np.reshape(tt[D],(R,I)),X[D].transpose())
 
     if d ==0:
-
-        Gright = linalg.khatri_rao(Gright, X[0].transpose())
+        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
+        Gright = np.reshape(tt[2], (R, R * I)).dot(Gright)
+        Gright = linalg.khatri_rao(X[1].transpose(), Gright)
+        Gright = np.reshape(tt[1], (R, R * I)).dot(Gright)
+        Gright = linalg.khatri_rao(X[0].transpose(), Gright)
         return Gright
-    else:
-        Gright = linalg.khatri_rao(Gright,X[d].transpose())  #X[d]
 
-    return (Gright.transpose())
+    if d ==1:
+        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
+        Gright = np.reshape(tt[2], (R, R * I)).dot(Gright)
+        Gright = linalg.khatri_rao(X[1].transpose(), Gright)
+        return Gright
+
+    if d ==2:
+        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
+
+        return Gright
+
+    # for i in a:
+    #     print(i)
+    #     Gright = linalg.khatri_rao(Gright,X[i-1].transpose())         #Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+    #     # print(np.reshape(tt[i - 1], (R, R * I)).dot(Gright) == Gright.transpose().dot(np.reshape(tt[i - 1], (R, R * I)).transpose()))
+    #     Gright = np.reshape(tt[i-1],(R,R*I)).dot(Gright)
+
+    return Gright
 
 def leftSuperCore(tt,X,d):
     R = 2
@@ -47,60 +60,46 @@ def leftSuperCore(tt,X,d):
     N = X[d].shape[0]
     # print(f'D = {D}')
 
-    Gleft = np.reshape(tt[0],(R,I))
+    Gleft = np.reshape(tt[0],(R,I)).dot(X[0].transpose())
     if d == 1:
-        # print(Gleft.shape, X.shape)
-        # print(f'dot = {Gleft.dot(X.transpose()).shape}')
-        Gleft = Gleft.dot(X[0].transpose())
 
-        return Gleft.transpose()
+        return Gleft
 
     if d== 2:
-        # print(f'Gleft,x = {Gleft.shape, X.shape}')
-        Gleft = linalg.khatri_rao(Gleft,X[d])
-        Gleft = np.reshape(Gleft,(N,I*R))
-        Gleft = Gleft.dot(np.reshape(tt[d],(I*R,R)))
+
+        Gleft = linalg.khatri_rao(X[1].transpose(), Gleft)
+        Gleft = np.reshape(Gleft,(N,I*R)).dot(np.reshape(tt[1],(I*R,R)))
 
         return np.reshape(Gleft, (N, R))
 
-    for i in range(1,d-1):
-        # print(i)
-        # print(Gleft.shape, X.shape)
-        Gleft = linalg.khatri_rao(Gleft, X[d]).transpose()   # N x JLRi1
-        Gleft = np.reshape(Gleft, (N*L, I*R))   # N x JLRi1 ->  NL x JRi1
+    if d ==3:
+        Gleft = linalg.khatri_rao(X[1].transpose(), Gleft)
+        Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[1],(I*R, R)))
 
-        temp = np.reshape(tt[i+1],(I*R, R))  # Ri1 x J x Ri2 -> JRi1 x Ri2
-
-        Gleft = Gleft.dot(temp)  # N x LRi2
-        Gleft = np.reshape(Gleft, (N, L * R))  # NL x Ri2 -> N x LRi2
-
-    if d == D:
-
-        return linalg.khatri_rao(Gleft.transpose(), X[d].transpose()).transpose()  #X[d] # N x JLRd
+        Gleft = linalg.khatri_rao(X[2].transpose(),Gleft.transpose()).transpose()
+        Gleft = Gleft.dot(np.reshape(tt[2],(I*R,R)))
+        Gleft = linalg.khatri_rao(X[3].transpose(),Gleft.transpose())
 
     return Gleft  # N x LRd
 
-def getUL(tt, X, d, L):
+def getUL(tt, X, d):
     R = 2
     I = X[d].shape[1]
     D = len(tt)-1
-    L = 1
-    D = len(tt)-1
+
+
     # print(L)
     N = X[d].shape[0]
 
     if d == 0:
         superCore = rightSuperCore(tt, X, d) # R2 x N
 
-        return np.reshape(superCore, (N*L, I*R)) # NL x LR2
+        return np.reshape(superCore, (N, I*R)) # NL x LR2
 
     elif d == 1:
-        Gleft = leftSuperCore(tt, X, d)  # L x R2
-        Gright = rightSuperCore(tt, X, d).transpose()  # J R3 x N
-
-
-        superCore = linalg.khatri_rao(Gright, Gleft.transpose()) # JR3 x N kron R2 x L -> R2JR3 x LN
-
+        Gleft = leftSuperCore(tt, X, d)
+        Gright = rightSuperCore(tt, X, d)
+        superCore = linalg.khatri_rao(Gright, Gleft)
         return np.reshape(superCore, (N, R*I*R))  # NL x R2JR3
 
     elif d==D:
@@ -109,23 +108,26 @@ def getUL(tt, X, d, L):
         return np.reshape(Gleft, (N, I*R))  # NL x J*Rd
 
     else:
+
         Gright = rightSuperCore(tt, X, d)  # Rd1 x N
         Gleft = leftSuperCore(tt, X, d)  # N x JLRd
 
-    superCore = linalg.khatri_rao(Gright.transpose(),Gleft.transpose())
+    superCore = linalg.khatri_rao(Gright,Gleft.transpose())
 
-    return np.reshape(superCore, (N * L, R * I * R)) # N L x Rd J Rd1
+    return np.reshape(superCore, (N, R * I * R)) # N L x Rd J Rd1
 
 def updateCore(tt,X,d,y):
 
-    U = getUL(tt,X,d,1)
+    U = getUL(tt,X,d)
 
     y = np.reshape(y, (100,1))
     UTy = U.transpose().dot(y)
 
     UTU = U.transpose().dot(U)
 
-    w = np.linalg.pinv(UTU).dot(UTy)
+    w = pinv(UTU).dot(UTy)
+    # print(d, w)
+    # w = UTU @ (UTy)
 
     print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
@@ -143,6 +145,7 @@ def tt_ALS(tt,X,y,iter):
             d = swipe[j]
 
             newCore = updateCore(mpt,X,d,y)
+            # print(i,j,newCore)
             mpt[d] = np.reshape(newCore,dims[d])
 
     return mpt
@@ -160,22 +163,6 @@ def featurespace(dataset, p):
             res[i][j] = Y
     return np.asarray(res)
 
-def hussel(dataset):
-    train, test = train_test_split(dataset,test_size=0.33)
-    return train,test
-
-def setupy(dset):
-    uv = list(dataset.iloc[:,-1].unique())
-    res = np.zeros((len(dset), len(uv)))
-    flower = list(dset.iloc[:, -1])
-
-    for j in range(len(flower)):
-        k = np.zeros(len(uv))
-        k[uv.index(flower[j])] = 1
-        res[j] = k
-
-    return res
-
 def yspace(dset):
     res = np.zeros((len(dset),1))
     uv = list(dataset.iloc[:,-1].unique())
@@ -184,34 +171,57 @@ def yspace(dset):
         res[j] = uv.index(flower[j])
     return res
 
+def yclassifier(dset, x):
+    res = np.zeros((len(dset),1))
+    uv = list(dataset.iloc[:,-1].unique())
+    flower = list(dset.iloc[:, -1])
+
+    for j in range(len(flower)):
+        if uv.index(flower[j]) == x:
+            res[j] = 1
+        else:
+            res[j] = -1
+    return res
+
 def supercore(tt, X):
     #contract
     D = len(tt)-1
     R = 2
     I = X[0].shape[1]
 
-    Gright = np.dot(np.reshape(tt[D], (R, I)), X[D].transpose())
+    Gright = np.dot(np.reshape(tt[D], (R, I)),X[D].transpose())
     for i in [3,2]:
-        Gright = linalg.khatri_rao(Gright, X[i - 1].transpose())             # Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+        Gright = linalg.khatri_rao(X[i - 1].transpose(),Gright)             # Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
         Gright = np.reshape(tt[i - 1], (R, R * I)).dot(Gright)
-    superCore = linalg.khatri_rao(Gright, X[0].transpose())
-    superCore = np.reshape(tt[0],(1,R*I)).dot(superCore)
-
+    superCore = linalg.khatri_rao(X[0].transpose(),Gright)
+    superCore = np.reshape(tt[0],(1,R*I)).dot(superCore).transpose()
 
     return superCore
 
 
 def test(dset, I, iter):
-    train, test = hussel(dset)
+    train, test = train_test_split(dset,test_size=0.33)
     Xtrain = featurespace(train,I)
     Xtest = featurespace(test,I)
     y = yspace(train)
-    tt = initrandomtt(dataset, I, r=2)
+    yy = yclassifier(train, 0)
+    # print(yy)
+    tt = initrandomtt(dset, I, r=2)
     traintt = tt_ALS(tt,Xtrain,y,iter)
 
-    model = supercore(traintt, Xtest)
-    print(model)
+    model = supercore(traintt, Xtrain)
+    # print(model)
+    #compare
+    count = 0
+    for i in range(len(model)):
+        if np.round(model[i],1) == y[i]:
+            count += 1
+            # print(np.round(model[i],1), model[i], y[i])
+    acc = (count/len(model)) * 100
+    print(f'accuracy is: {acc}')
 
+def pinv(M):
+    return M.T * np.linalg.inv(M*M.T)
 
 iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
 irisdataset = iris.iloc[:,[1,2,3,4,5]]
