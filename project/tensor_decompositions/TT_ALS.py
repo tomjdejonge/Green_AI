@@ -44,12 +44,6 @@ def rightSuperCore(tt,X,d):
 
         return Gright
 
-    # for i in a:
-    #     print(i)
-    #     Gright = linalg.khatri_rao(Gright,X[i-1].transpose())         #Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
-    #     # print(np.reshape(tt[i - 1], (R, R * I)).dot(Gright) == Gright.transpose().dot(np.reshape(tt[i - 1], (R, R * I)).transpose()))
-    #     Gright = np.reshape(tt[i-1],(R,R*I)).dot(Gright)
-
     return Gright
 
 def leftSuperCore(tt,X,d):
@@ -58,7 +52,7 @@ def leftSuperCore(tt,X,d):
     D = len(tt)-1
     L = 1
     N = X[d].shape[0]
-    # print(f'D = {D}')
+
 
     Gleft = np.reshape(tt[0],(R,I)).dot(X[0].transpose())
     if d == 1:
@@ -86,9 +80,6 @@ def getUL(tt, X, d):
     R = 2
     I = X[d].shape[1]
     D = len(tt)-1
-
-
-    # print(L)
     N = X[d].shape[0]
 
     if d == 0:
@@ -102,32 +93,26 @@ def getUL(tt, X, d):
         superCore = linalg.khatri_rao(Gright, Gleft)
         return np.reshape(superCore, (N, R*I*R))  # NL x R2JR3
 
-    elif d==D:
-        Gleft = leftSuperCore(tt, X, d)  # N x JLRd
-
-        return np.reshape(Gleft, (N, I*R))  # NL x J*Rd
-
-    else:
+    elif d == 2:
 
         Gright = rightSuperCore(tt, X, d)  # Rd1 x N
         Gleft = leftSuperCore(tt, X, d)  # N x JLRd
+        superCore = linalg.khatri_rao(Gright, Gleft.transpose())
+        return np.reshape(superCore, (N, R * I * R))  # N L x Rd J Rd1
 
-    superCore = linalg.khatri_rao(Gright,Gleft.transpose())
+    elif d==D:
+        Gleft = leftSuperCore(tt, X, d)  # N x JLRd
 
-    return np.reshape(superCore, (N, R * I * R)) # N L x Rd J Rd1
+        return np.reshape(Gleft, (N, I*R))  # NL x J*R
 
 def updateCore(tt,X,d,y):
 
     U = getUL(tt,X,d)
-
-    y = np.reshape(y, (100,1))
-    UTy = U.transpose().dot(y)
+    UTy = U.transpose().dot(np.reshape(y, (100,1)))
 
     UTU = U.transpose().dot(U)
 
-    w = pinv(UTU).dot(UTy)
-    # print(d, w)
-    # w = UTU @ (UTy)
+    w = pinv(UTU)@(UTy)
 
     print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
@@ -144,11 +129,11 @@ def tt_ALS(tt,X,y,iter):
         for j in range(len(swipe)):
             d = swipe[j]
 
-            newCore = updateCore(mpt,X,d,y)
+            newCore = updateCore(tt,X,d,y)
             # print(i,j,newCore)
-            mpt[d] = np.reshape(newCore,dims[d])
+            tt[d] = np.reshape(newCore,dims[d])
 
-    return mpt
+    return tt
 
 def featurespace(dataset, p):
     cnames = dataset.columns.values
