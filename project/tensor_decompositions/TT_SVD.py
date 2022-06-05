@@ -3,6 +3,9 @@ import tensorly as tl
 import numpy as np
 from scipy import linalg
 import matplotlib.pyplot as plt
+from torchstat import stat
+import torchvision.models as models
+import tensorflow as tf
 
 
 # Original file: T_train.py (method 1) ---------------------------------------------------------------------------------
@@ -490,5 +493,21 @@ def main():
         new_image = Image.fromarray((B).astype(np.uint8),'RGB')
         compare(new_image, new_image)
 
+def flopcounter():
+    model = models.resnet18()
+    res = stat(model, (3, 224, 224))
+
+    print(stat(model, (3, 224, 224)))
+
+def calculate_flops():
+    # Print to stdout an analysis of the number of floating point operations in the
+    # model broken down by individual operations.
+    tf.profiler.profile(
+        tf.get_default_graph(),
+        options=tf.profiler.ProfileOptionBuilder.float_operation(), cmd='scope')
+
 if __name__ == "__main__":
+
     main()
+    flopcounter()
+    # calculate_flops()

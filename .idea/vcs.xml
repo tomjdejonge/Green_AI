@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/smop" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/smop/pypapi" vcs="Git" />
   </component>
 </project>

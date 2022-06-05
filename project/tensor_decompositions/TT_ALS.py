@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 from scipy import linalg
 from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+
+
 
 
 def initrandomtt(dataset,J, r):
@@ -112,9 +118,9 @@ def updateCore(tt,X,d,y):
 
     UTU = U.transpose().dot(U)
 
-    w = pinv(UTU)@(UTy)
+    w = pinv(UTU).dot(UTy)
 
-    print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
+    # print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
 
 def tt_ALS(tt,X,y,iter):
@@ -205,8 +211,27 @@ def test(dset, I, iter):
     acc = (count/len(model)) * 100
     print(f'accuracy is: {acc}')
 
+
 def pinv(M):
     return M.T * np.linalg.inv(M*M.T)
+
+
+def randomtest():
+    test(irisdataset, 4, 3)
+
+
+def get_flops(model):
+    run_meta = tf.compat.v1.RunMetadata()
+    opts = tf.compat.v1.profiler.ProfileOptionBuilder.float_operation()
+
+    # We use the Keras session graph in the call to the profiler.
+    flops = tf.compat.v1.profiler.profile(graph=tf.compat.v1.keras.backend.get_session().graph,
+                                          run_meta=run_meta, cmd='op', options=opts)
+
+    return flops.total_float_ops  # Prints the "flops" of the model.
+
+# .... Define your model here ....
+
 
 iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
 irisdataset = iris.iloc[:,[1,2,3,4,5]]
@@ -216,7 +241,11 @@ wine = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decomposi
 #variables:
 I = 4 #nauwkeurigheid
 feature = 0
-iter = 3
+iter = 4
 dataset = irisdataset
 
-test(dataset, I, iter)
+# test(irisdataset, I, iter)
+
+model = Sequential(test(irisdataset, I, iter))
+model.add(Dense(8, activation='softmax'))
+print(get_flops(model))
