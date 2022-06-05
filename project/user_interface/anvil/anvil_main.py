@@ -20,7 +20,10 @@ def process_image(image):
 
 @anvil.server.callable
 def image_tensor_train(img, epsilon=0.1):
+    t_start = process_time()
     g, d, r, n = tensortrain(img, epsilon)
+    t_stop = process_time()
+
     reconstructed = tt_reconstruction(g, d, r, n)
     new_image = border(np.array(reconstructed), 0, 255, p=True)
     final_image = Image.fromarray(new_image.astype(np.uint8), 'RGB')
