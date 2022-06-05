@@ -28,11 +28,13 @@ for k in epsilons:
     percentage.append(total_elements[c] / 786432)
     c += 1
 
-figure, axis = plt.subplots(1, 2)
+figure, axis = plt.subplots(3)
 
 axis[0].plot(epsilons, percentage)
 axis[0].set_title("Epsilon vs Percentage of Total Entries")
 axis[1].plot(total_elements, t1)
 axis[1].set_title("No of Elements vs Calculation time")
+axis[2].plot(percentage, t1)
+axis[2].set_title("Percentage of entries vs Calculation time")
 
 plt.show()
