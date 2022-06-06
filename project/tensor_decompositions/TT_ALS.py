@@ -28,12 +28,11 @@ def rightSuperCore(tt,X,d):
     Gright = np.dot(np.reshape(tt[D],(R,I)),X[D].transpose())
     # print(f'{d, a}')
     for i in a:
-        print(linalg.khatri_rao(X[i-1].transpose(), Gright) == linalg.khatri_rao(Gright,X[i-1].transpose()))
-        Gright = linalg.khatri_rao(X[i-1].transpose(), Gright)
-        Gright = np.reshape(tt[i-1], (R, R * I)).dot(Gright)
+        # print(linalg.khatri_rao(X[i-1].transpose(), Gright) == linalg.khatri_rao(Gright,X[i-1].transpose()))
+        Gright = linalg.khatri_rao(Gright, X[i-1].transpose())
+        Gright = np.reshape(tt[i-1], (R, R*I)).dot(Gright)
 
-
-    Gright = linalg.khatri_rao(X[d].transpose(), Gright)
+    Gright = linalg.khatri_rao(Gright, X[d].transpose())
 
     return Gright
 
@@ -98,14 +97,14 @@ def updateCore(tt,X,d,y):
 
     UTU = U.transpose().dot(U)
 
-    w = pinv(UTU).dot(UTy)
+    w = linalg.inv(UTU).dot(UTy)
 
+    #np.linalg.inv(M.T*M) * M.T
     # print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
 
 def tt_ALS(tt,X,y,iter):
     D= len(tt)-1
-    mpt = tt.copy()
     xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])
     swipe = [x for xs in xss for x in xs]
     dims = []
@@ -119,7 +118,7 @@ def tt_ALS(tt,X,y,iter):
             newCore = updateCore(tt,X,d,y)
 
             tt[d] = np.reshape(newCore,dims[d])
-
+        print(tt)
     return tt
 
 def featurespace(dataset, p):
@@ -175,37 +174,26 @@ def t_test(dset, I, iter):
     Xtest = featurespace(test,I)
     y = yspace(train)
     yy = yclassifier(train, 0)
-    # print(yy)
+    # print('yy',yy)
     # print(y)
     tt = initrandomtt(dset, I,0,3,r=2)
     traintt = tt_ALS(tt,Xtrain,yy,iter)
 
     model = supercore(traintt, Xtrain)
-    # print(model)
+    # print(f'model = {model}')
     #compare
     count = 0
     for i in range(len(model)):
-        if np.round(model[i],1) == yy[i]:
+        if model[i] < 0 and yy[i] < 0:
+            count += 1
+        if model[i] > 0 and yy[i] > 0:
             count += 1
             # print(np.round(model[i],1), model[i], y[i])
     acc = (count/len(model)) * 100
     print(f'accuracy is: {acc}')
 
-def pinv(M):
+def ppinv(M):
     return np.linalg.inv(M.T*M) * M.T
-
-
-def get_flops(model):
-    run_meta = tf.compat.v1.RunMetadata()
-    opts = tf.compat.v1.profiler.ProfileOptionBuilder.float_operation()
-
-    # We use the Keras session graph in the call to the profiler.
-    flops = tf.compat.v1.profiler.profile(graph=tf.compat.v1.keras.backend.get_session().graph,
-                                          run_meta=run_meta, cmd='op', options=opts)
-
-    return flops.total_float_ops  # Prints the "flops" of the model.
-
-# .... Define your model here ....
 
 
 iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
