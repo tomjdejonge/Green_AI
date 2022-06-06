@@ -5,16 +5,13 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+import time as time
 
-
-
-
-
-def initrandomtt(dataset,J, r):
-    start = [np.random.randint(0,2,size=(r,1,J))]
+def initrandomtt(dataset,J, min, max,r=2):
+    start = [np.random.randint(min,max,size=(r,1,J))]
     for i in range(len(dataset.columns.values)-3):
-        start.append(np.array([np.random.randint(0,2,size=(r,r,J))] ))
-    start.append(np.array([np.random.randint(0,2,size=(1,r,J))]))
+        start.append(np.array([np.random.randint(min,max,size=(r,r,J))] ))
+    start.append(np.array([np.random.randint(min,max,size=(1,r,J))]))
 
     return np.array(start,dtype=object)
 
@@ -28,27 +25,15 @@ def rightSuperCore(tt,X,d):
     D = len(tt)-1
     a = np.arange(d+2, D+1, 1).tolist()[::-1]
 
-
     Gright = np.dot(np.reshape(tt[D],(R,I)),X[D].transpose())
+    # print(f'{d, a}')
+    for i in a:
+        print(linalg.khatri_rao(X[i-1].transpose(), Gright) == linalg.khatri_rao(Gright,X[i-1].transpose()))
+        Gright = linalg.khatri_rao(X[i-1].transpose(), Gright)
+        Gright = np.reshape(tt[i-1], (R, R * I)).dot(Gright)
 
-    if d ==0:
-        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
-        Gright = np.reshape(tt[2], (R, R * I)).dot(Gright)
-        Gright = linalg.khatri_rao(X[1].transpose(), Gright)
-        Gright = np.reshape(tt[1], (R, R * I)).dot(Gright)
-        Gright = linalg.khatri_rao(X[0].transpose(), Gright)
-        return Gright
 
-    if d ==1:
-        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
-        Gright = np.reshape(tt[2], (R, R * I)).dot(Gright)
-        Gright = linalg.khatri_rao(X[1].transpose(), Gright)
-        return Gright
-
-    if d ==2:
-        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
-
-        return Gright
+    Gright = linalg.khatri_rao(X[d].transpose(), Gright)
 
     return Gright
 
@@ -62,23 +47,18 @@ def leftSuperCore(tt,X,d):
 
     Gleft = np.reshape(tt[0],(R,I)).dot(X[0].transpose())
     if d == 1:
-
         return Gleft
 
-    if d== 2:
+    for i in range(1,d):
+        if (i % 2) == 1:
+            Gleft = linalg.khatri_rao(X[i].transpose(), Gleft)
+            Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[i],(I*R, R)))
+        if (i % 2) == 0:
+            Gleft = linalg.khatri_rao(X[i].transpose(), Gleft.transpose()).transpose()
+            Gleft = Gleft.dot(np.reshape(tt[i], (I * R, R)))
 
-        Gleft = linalg.khatri_rao(X[1].transpose(), Gleft)
-        Gleft = np.reshape(Gleft,(N,I*R)).dot(np.reshape(tt[1],(I*R,R)))
-
-        return np.reshape(Gleft, (N, R))
-
-    if d ==3:
-        Gleft = linalg.khatri_rao(X[1].transpose(), Gleft)
-        Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[1],(I*R, R)))
-
-        Gleft = linalg.khatri_rao(X[2].transpose(),Gleft.transpose()).transpose()
-        Gleft = Gleft.dot(np.reshape(tt[2],(I*R,R)))
-        Gleft = linalg.khatri_rao(X[3].transpose(),Gleft.transpose())
+    if d ==D:
+        Gleft = linalg.khatri_rao(X[D].transpose(),Gleft.transpose())
 
     return Gleft  # N x LRd
 
@@ -93,28 +73,28 @@ def getUL(tt, X, d):
 
         return np.reshape(superCore, (N, I*R)) # NL x LR2
 
-    elif d == 1:
-        Gleft = leftSuperCore(tt, X, d)
-        Gright = rightSuperCore(tt, X, d)
-        superCore = linalg.khatri_rao(Gright, Gleft)
-        return np.reshape(superCore, (N, R*I*R))  # NL x R2JR3
-
-    elif d == 2:
-
-        Gright = rightSuperCore(tt, X, d)  # Rd1 x N
-        Gleft = leftSuperCore(tt, X, d)  # N x JLRd
-        superCore = linalg.khatri_rao(Gright, Gleft.transpose())
-        return np.reshape(superCore, (N, R * I * R))  # N L x Rd J Rd1
-
     elif d==D:
         Gleft = leftSuperCore(tt, X, d)  # N x JLRd
 
-        return np.reshape(Gleft, (N, I*R))  # NL x J*R
+        return np.reshape(Gleft, (N, I * R))
+
+
+    Gright = rightSuperCore(tt, X, d)  # Rd1 x N
+    Gleft = leftSuperCore(tt, X, d)  # N x JLRd
+
+    if (d % 2) == 1:
+        superCore = linalg.khatri_rao(Gright, Gleft)
+
+    elif  (d % 2) == 0:
+        superCore = linalg.khatri_rao(Gright, Gleft.transpose())
+
+    return np.reshape(superCore, (N, R * I * R))  # NL x R2JR3
+
 
 def updateCore(tt,X,d,y):
 
     U = getUL(tt,X,d)
-    UTy = U.transpose().dot(np.reshape(y, (100,1)))
+    UTy = U.transpose().dot(np.reshape(y, (max(y.shape),1)))
 
     UTU = U.transpose().dot(U)
 
@@ -126,7 +106,8 @@ def updateCore(tt,X,d,y):
 def tt_ALS(tt,X,y,iter):
     D= len(tt)-1
     mpt = tt.copy()
-    swipe = [0,1,2,3,2,1]
+    xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])
+    swipe = [x for xs in xss for x in xs]
     dims = []
     for i in range(len(tt)):
         dims.append(tt[i].shape)
@@ -136,7 +117,7 @@ def tt_ALS(tt,X,y,iter):
             d = swipe[j]
 
             newCore = updateCore(tt,X,d,y)
-            # print(i,j,newCore)
+
             tt[d] = np.reshape(newCore,dims[d])
 
     return tt
@@ -146,12 +127,10 @@ def featurespace(dataset, p):
     res = [[[0 for _ in range(len(cnames))] for _ in range(len(dataset))] for _ in range(p)]
 
     for i in range(len(cnames)-1):
+        flower = list(dataset.iloc[:, i])
         for j in range(len(dataset)):
+            res[i][j] = np.array([flower[j]**i for i in range(p)])
 
-            flower = list(dataset.iloc[:, i])
-            X = flower[j]
-            Y = np.array([X**i for i in range(p)])
-            res[i][j] = Y
     return np.asarray(res)
 
 def yspace(dset):
@@ -181,43 +160,39 @@ def supercore(tt, X):
     I = X[0].shape[1]
 
     Gright = np.dot(np.reshape(tt[D], (R, I)),X[D].transpose())
-    for i in [3,2]:
-        Gright = linalg.khatri_rao(X[i - 1].transpose(),Gright)             # Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
-        Gright = np.reshape(tt[i - 1], (R, R * I)).dot(Gright)
+    for i in [2,1]:
+        Gright = linalg.khatri_rao(X[i].transpose(),Gright)             # Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+        Gright = np.reshape(tt[i], (R, R * I)).dot(Gright)
     superCore = linalg.khatri_rao(X[0].transpose(),Gright)
     superCore = np.reshape(tt[0],(1,R*I)).dot(superCore).transpose()
 
     return superCore
 
 
-def test(dset, I, iter):
+def t_test(dset, I, iter):
     train, test = train_test_split(dset,test_size=0.33)
     Xtrain = featurespace(train,I)
     Xtest = featurespace(test,I)
     y = yspace(train)
     yy = yclassifier(train, 0)
     # print(yy)
-    tt = initrandomtt(dset, I, r=2)
-    traintt = tt_ALS(tt,Xtrain,y,iter)
+    # print(y)
+    tt = initrandomtt(dset, I,0,3,r=2)
+    traintt = tt_ALS(tt,Xtrain,yy,iter)
 
     model = supercore(traintt, Xtrain)
     # print(model)
     #compare
     count = 0
     for i in range(len(model)):
-        if np.round(model[i],1) == y[i]:
+        if np.round(model[i],1) == yy[i]:
             count += 1
             # print(np.round(model[i],1), model[i], y[i])
     acc = (count/len(model)) * 100
     print(f'accuracy is: {acc}')
 
-
 def pinv(M):
-    return M.T * np.linalg.inv(M*M.T)
-
-
-def randomtest():
-    test(irisdataset, 4, 3)
+    return np.linalg.inv(M.T*M) * M.T
 
 
 def get_flops(model):
@@ -235,17 +210,19 @@ def get_flops(model):
 
 iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
 irisdataset = iris.iloc[:,[1,2,3,4,5]]
-wine = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv')
-# print(wine.iloc[:,[1,2,3,4,5]])
+# wine = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv',delimeter=';')
+# print(wine)
 
 #variables:
 I = 4 #nauwkeurigheid
 feature = 0
-iter = 4
+iter = 1
 dataset = irisdataset
 
-# test(irisdataset, I, iter)
+t_test(irisdataset, I, iter)
 
-model = Sequential(test(irisdataset, I, iter))
-model.add(Dense(8, activation='softmax'))
-print(get_flops(model))
+
+print(time.process_time())
+# model = Sequential(t_test(irisdataset, I, iter))
+# model.add(Dense(8, activation='softmax'))
+# print(get_flops(model))
