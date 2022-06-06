@@ -10,12 +10,13 @@ import time as time
 
 #Read the dataset
 dataset = pd.read_csv("/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv", header = 0 )
+dataset = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv', header = 0)
 
 colnames=list(dataset.iloc[:,-1].unique())
 
 # print(dataset)
 #Encoding the categorical column
-dataset = dataset.replace({"class":  {"Iris-setosa":1,"Iris-versicolor":2, "Iris-virginica":3}})
+# dataset = dataset.replace({"class":  {"Iris-setosa":1,"Iris-versicolor":2, "Iris-virginica":3}})
 X = dataset.iloc[:,:-1]
 y = dataset.iloc[:, -1].values
 

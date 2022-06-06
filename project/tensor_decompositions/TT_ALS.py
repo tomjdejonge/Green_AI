@@ -55,17 +55,16 @@ def leftSuperCore(tt,X,d):
     Gleft = np.reshape(tt[0],(R,I)).dot(X[0].transpose())
     if d == 1:
         return Gleft
-
+    print(d, Gleft.shape, X[d].shape)
     for i in range(1,d):
-        if (i % 2) == 1:
-            Gleft = linalg.khatri_rao(X[i].transpose(), Gleft)
-            Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[i],(I*R, R)))
-        if (i % 2) == 0:
-            Gleft = linalg.khatri_rao(X[i].transpose(), Gleft.transpose()).transpose()
-            Gleft = Gleft.dot(np.reshape(tt[i], (I * R, R)))
+        print(d, i, Gleft.shape, X[d].shape)
+
+        Gleft = linalg.khatri_rao(Gleft, X[i].transpose())
+        Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[i],(I*R, R)))
+        Gleft = np.reshape(Gleft, (min(Gleft.shape),max(Gleft.shape)))
 
     if d ==D:
-        Gleft = linalg.khatri_rao(X[D].transpose(),Gleft.transpose())
+        Gleft = linalg.khatri_rao(Gleft,X[D].transpose())
 
     return Gleft  # N x LRd
 
@@ -89,11 +88,9 @@ def getUL(tt, X, d):
     Gright = rightSuperCore(tt, X, d)  # Rd1 x N
     Gleft = leftSuperCore(tt, X, d)  # N x JLRd
 
-    if (d % 2) == 1:
-        superCore = linalg.khatri_rao(Gright, Gleft)
-
-    elif  (d % 2) == 0:
-        superCore = linalg.khatri_rao(Gright, Gleft.transpose())
+    Gleft = np.reshape(Gleft, (min(Gleft.shape), max(Gleft.shape)))
+    Gright = np.reshape(Gright, (min(Gright.shape), max(Gright.shape)))
+    superCore = linalg.khatri_rao(Gright, Gleft)
 
     return np.reshape(superCore, (N, R * I * R))  # NL x R2JR3
 
@@ -108,7 +105,7 @@ def updateCore(tt,X,d,y):
     w = linalg.inv(UTU).dot(UTy)
 
     #np.linalg.inv(M.T*M) * M.T
-    # print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
+    print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
 
 def tt_ALS(tt,X,y,iter):
@@ -116,6 +113,9 @@ def tt_ALS(tt,X,y,iter):
     xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])
     swipe = [x for xs in xss for x in xs]
     dims = []
+
+     # [collect(1:D)..., collect(D-1:-1:2)...] = [0,1,2,3,2,1]??
+
     for i in range(len(tt)):
         dims.append(tt[i].shape)
 
@@ -126,18 +126,20 @@ def tt_ALS(tt,X,y,iter):
             newCore = updateCore(tt,X,d,y)
 
             tt[d] = np.reshape(newCore,dims[d])
-        # print(tt)
+            # print(tt)
+
     return tt
 
-def featurespace(dtset, p):
-    cnames = dtset.columns.values
-    res = [[[0 for _ in range(len(cnames))] for _ in range(len(dtset))] for _ in range(p)]
-    print(len(cnames))
+def featurespace(dataset, p):
+    cnames = dataset.columns.values
+    res = [[[0 for _ in range(p)] for _ in range(len(dataset))] for _ in range(len(cnames))]
+    # print(len(cnames), len(dataset), p)
     for i in range(len(cnames)-1):
         flower = list(dataset.iloc[:, i])
-        for j in range(len(dtset)-1):
+        for j in range(len(dataset)):
+            # print(i,j)
             res[i][j] = np.array([flower[j]**i for i in range(p)])
-    # print('res', res)
+
     return np.asarray(res)
 
 def yspace(dset):
@@ -192,9 +194,7 @@ def t_test(dset, I, iter):
     #compare
     count = 0
     for i in range(len(model)):
-        if model[i] < 0 and yy[i] < 0:
-            count += 1
-        if model[i] > 0 and yy[i] > 0:
+        if model[i] * yy[i] > 0:
             count += 1
             # print(np.round(model[i],1), model[i], y[i])
     acc = (count/len(model)) * 100
@@ -211,20 +211,22 @@ def seper(file):
     else:
         print(";")
 
-
-iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv', index=False)
-irisdataset = iris.iloc[:,[1,2,3,4,5]]
-wine = pd.read_csv("/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv", sep=";")
-# print(wine)
+iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
+# iris = iris.iloc[:,[1,2,3,4,5]]
+# penguins = pd.read_csv("/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/penguins.csv")
+indiaan = pd.read_csv("/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv")
+# print(indiaan)
 # seper('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
 
-print(iris)
-print(irisdataset)
+# indiaandataset = iris.iloc[:,[1,2,3,4,5,6,7]]
+# print(indiaandataset)
+
+
 #variables:
 I = 4 #nauwkeurigheid
 feature = 0
 iter = 1
-dataset = irisdataset
+dataset = iris
 
 t_test(dataset, I, iter)
 
@@ -233,3 +235,139 @@ print(time.process_time())
 # model = Sequential(t_test(irisdataset, I, iter))
 # model.add(Dense(8, activation='softmax'))
 # print(get_flops(model))
+
+
+"""[2022/05/23 16:19] Eva Memmel
+function testeva(tt::MPT, X::Matrix, y::Array, P0inv::Vector{Array{Float64}},σ::Float64,maxiter::Int64)
+
+    #y: matrix y(:,k) contains kth output
+    #u: matrix u(:,k) contains kth input
+    #M: integer, memory of each Volterra kernel
+    #rnks: matrix, contains r_2 ... r_{D-1}
+    #minimax: min and max value for uniform distribution in prior
+    #σ: initial variance
+    
+    
+    
+        #-----------------------------------------------------------
+        # TT_ALS in Bayesian framework
+        #
+        # Eva September 2021
+        #----------------------------------------------------------- 
+        D = order(tt)
+        coreDims = coreDimensions(tt)
+        swipe = [collect(1:D)..., collect(D-1:-1:2)...]
+        mpt0 = deepcopy(tt)
+        P = Vector{Array{Float64}}(undef,D)
+        for i = 1:maxiter
+            for j = 1:2D-2
+                d = swipe[j]
+                newCore, Pnew = updateCoreL(tt,mpt0,X,y,P0inv,d,σ) # case d=1: JLR2, case d!=1 RdJRd1
+                tt.cores[d] = reshape(newCore,(coreDims[d]))
+                P[d] = Pnew
+            end      
+        end
+        #take dimension L out of first core
+        L = size(y,2)
+        return tt, P
+    end
+
+[2022/05/23 16:19] Eva Memmel
+    function rightSuperCoreL(tt::MPT, X::Matrix, d::Int64)
+        D = length(tt.cores)
+        Gright = reshape(tt.cores[D],size(tt.cores[D])[1:2])*X' # RD x I * I  N -> RD x N 
+        for i = D:-1:d+2
+            Gright = dotkron(collect(Gright'),X) #N x JRi
+            Gright = reshape(tt.cores[i-1],(size(tt.cores[i-1])[1],prod(size(tt.cores[i-1])[2:3])))*Gright' #Ri-1 x JRi * JRi x N -> Ri-1 x N
+        end
+        if d ==1
+            return Gright #R2 x N
+        end
+        Gright = dotkron(collect(Gright'),X) #N x JR3
+        return collect(Gright')
+    end
+
+[2022/05/23 16:20] Eva Memmel
+    function leftSuperCoreL(tt::MPT, X::Matrix, d::Int64)
+        D = order(tt)
+        r1,L,r2 = size(tt.cores[1])
+        Gleft = reshape(tt.cores[1],L,r2)
+        N = size(X,1)
+        if d == 2
+            return Gleft # L x r2
+        end
+        r2,J,r3 = size(tt.cores[2])
+        Gleft = Gleft * reshape(tt.cores[2],r2,J*r3) #L x Ir3
+        Gleft = reshape(permutedims(reshape(Gleft,L,J,r3),[2,1,3]),J,L*r3) #I x Lr3
+        Gleft = X*Gleft # N x LR3
+        if d == 3
+            return Gleft # N x LR3
+        end
+        for i = 2:d-2
+            Ri,J,Ri1 = size(tt.cores[i])
+            Gleft = dotkron(Gleft,X) # N x JLRi1
+            Gleft = reshape(permutedims(reshape(Gleft,(N,J,L,Ri1)),(1, 3, 2, 4)),(N*L,J*Ri1)) # N x JLRi1 ->  NL x JRi1
+            Ri1,J,Ri2 = size(tt.cores[i+1])
+            temp = reshape(permutedims(tt.cores[i+1],(2,1,3)),(J*Ri1,Ri2)) # Ri1 x J x Ri2 -> JRi1 x Ri2
+            Gleft = Gleft*temp #N x LRi2
+            Gleft = reshape(Gleft,(N,L*Ri2)) #NL x Ri2 -> N x LRi2
+        end
+        if d == D
+            return dotkron(Gleft,X) # N x JLRd
+        end
+        return Gleft # N x LRd
+    end
+
+[2022/05/23 16:20] Eva Memmel
+    function getUL(tt::MPT, X::Matrix, d::Int64, L::Int64)
+        D = length(tt.cores)
+        N = size(X)[1]    
+        R1,L,R2 = size(tt.cores[1])
+        Rd,J,Rd1 = size(tt.cores[d])
+        if d == 1
+            Gright = rightSuperCoreL(tt, X, d) # R2 x N
+            Gleft = Matrix(1.0I,L,L) #L x L 
+            superCore = kron(Gright,Gleft) # R2 x N kron L x L -> LR2 x L N
+            superCore = reshape(permutedims(reshape(superCore,L,R2,L,N),[4 3 1 2]),N*L,L*R2) # NL x LR2
+            return superCore  # NL x LR2 
+        elseif d == 2   
+            Gleft = leftSuperCoreL(tt,X,d) # L x R2
+            Gright = rightSuperCoreL(tt,X,d) # J R3 x N
+            superCore = kron(Gright,Gleft') # JR3 x N kron R2 x L -> R2JR3 x LN
+            superCore = reshape(permutedims(reshape(superCore,Rd,J,Rd1,L,N),[5 4 1 2 3]),N*L,Rd*J*Rd1) # NL x R2JR3
+            return superCore
+        elseif d == D 
+            Gleft = leftSuperCoreL(tt,X,d) # N x JLRd        
+            return reshape(permutedims(reshape(Gleft,(N,J,L,Rd)),(1,3,2,4)),(N*L,J*Rd)) #NL x J*Rd
+        else    
+            Gright = rightSuperCoreL(tt, X, d) # Rd1 x N
+            Gleft = leftSuperCoreL(tt,X,d) # N x JLRd
+        end
+        superCore = dotkron(collect(Gright'),Gleft) # N x L Rd J Rd1 
+        superCore = reshape(reshape(superCore,N,L,Rd,J,Rd1),N*L,Rd*J*Rd1) # N L x Rd J Rd1
+        return superCore #N L x Rd J Rd1
+    end
+
+[2022/05/23 16:20] Eva Memmel
+    function updateCoreL(tt::MPT, mpt0::MPT, X::Matrix, y::Array, P0inv::Vector{Array{Float64}}, d::Int64,σ::Float64)
+        #-----------------------------------------------------------
+        # Bayesian updating of one core while fixing all others in Volterra Setting
+        #
+        # Eva Memmel, Oktober 2021
+        #-----------------------------------------------------------
+        if isa(y,Matrix)
+            L = size(y,2); #L: number of outputs
+        else
+            L = 1
+        end
+        U = getUL(tt,X,d,L); #case d=1: NL x JLR2, case d!=1 Nl x RdJRd1 
+        UTy = U'*vec(y); # case d=1: JLR2, case d!=1 RdJRd1 
+        UTU = U'U; #case d=1: JLR2x JLR2, case d!=1 RdJRd1 RdJRd1 
+      
+        m0 = vec(mpt0.cores[d])  # case d=1: JLR2, case d!=1 RdJRd1
+        Pnew = P0inv[d] + UTU/(σ^2) #case d=1: JLR2x JLR2, case d!=1 RdJRd1 RdJRd1
+        mnew = pinv(Pnew)*(UTy/(σ^2) + P0inv[d]*m0)  
+        return mnew, Pnew
+    end
+
+"""
