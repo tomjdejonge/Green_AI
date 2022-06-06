@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import anvil.tables as tables
 from anvil.tables import app_tables
+from time import process_time
 
 anvil.server.connect('DH4R5MH3DTKYNYBPF63XKZLV-UHSXWMNTP7IBV2RQ')
 
@@ -26,7 +27,7 @@ def image_tensor_train(img, epsilon=0.1):
     deconstruction_time = t_stop - t_start
     tt_elements = []
     for i in range(d+1):
-        tt_elements[i] = np.size(g[i])
+        tt_elements.append(np.size(g[i]))
     total_elements = sum(tt_elements)
     percentage = total_elements/786432
     reconstructed = tt_reconstruction(g, d, r, n)
@@ -36,7 +37,7 @@ def image_tensor_train(img, epsilon=0.1):
     name = 'final_image'
     final_image.save(bs, format="JPEG")
     final = anvil.BlobMedia("image/jpeg", bs.getvalue(), name=name)
-    return g, d, r, n, final, total_elements
+    return g, d, r, n, final, deconstruction_time, percentage, total_elements
 
 
 @anvil.server.callable
