@@ -16,6 +16,17 @@ t2 = []
 img = Image.open('C:/Users/tommo/Downloads/dog.jpg.jpeg')
 img = np.asarray(img)
 
+def accuracy(image, epsilon):
+    g, d, r, n = tensortrain(image, epsilon)
+    reconstructed = tt_reconstruction(g, d, r, n)
+    bordered = border(np.array(reconstructed), 0, 255, p=True)
+    error = np.sum(np.absolute(np.subtract(image, bordered)))
+    total = np.sum(image)
+    error_percentage = error / total
+    return error_percentage
+
+error = accuracy(img, 0.1)
+
 c = 0
 for k in epsilons:
     t_start = process_time()
