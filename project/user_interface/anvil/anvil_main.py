@@ -24,14 +24,17 @@ def image_tensor_train(img, epsilon=0.1):
     t_start = process_time()
     g, d, r, n = tensortrain(img, epsilon)
     t_stop = process_time()
-    deconstruction_time = t_stop - t_start
+    deconstruction_time = float(np.round(t_stop - t_start, 3))
     tt_elements = []
     for i in range(d+1):
         tt_elements.append(np.size(g[i]))
     total_elements = sum(tt_elements)
-    percentage = total_elements/786432
+    percentage = float(np.round((total_elements/786432)*100, 3))
     reconstructed = tt_reconstruction(g, d, r, n)
     new_image = border(np.array(reconstructed), 0, 255, p=True)
+    error = np.sum(np.absolute(np.subtract(img, new_image)))
+    total = np.sum(new_image)
+    error_percentage = error / total
     final_image = Image.fromarray(new_image.astype(np.uint8), 'RGB')
     bs = io.BytesIO()
     name = 'final_image'
