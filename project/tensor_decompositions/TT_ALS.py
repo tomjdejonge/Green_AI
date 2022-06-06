@@ -31,10 +31,18 @@ def rightSuperCore(tt,X,d):
         # print(linalg.khatri_rao(X[i-1].transpose(), Gright) == linalg.khatri_rao(Gright,X[i-1].transpose()))
         Gright = linalg.khatri_rao(Gright, X[i-1].transpose())
         Gright = np.reshape(tt[i-1], (R, R*I)).dot(Gright)
+        # print(f'gright = {Gright}')
 
     Gright = linalg.khatri_rao(Gright, X[d].transpose())
 
     return Gright
+"""  if d ==0:
+        Gright = linalg.khatri_rao(X[2].transpose(), Gright)
+        Gright = np.reshape(tt[2], (R, R * I)).dot(Gright)
+        Gright = linalg.khatri_rao(X[1].transpose(), Gright)
+        Gright = np.reshape(tt[1], (R, R * I)).dot(Gright)
+        Gright = linalg.khatri_rao(X[0].transpose(), Gright)
+        return Gright"""
 
 def leftSuperCore(tt,X,d):
     R = 2
@@ -118,18 +126,18 @@ def tt_ALS(tt,X,y,iter):
             newCore = updateCore(tt,X,d,y)
 
             tt[d] = np.reshape(newCore,dims[d])
-        print(tt)
+        # print(tt)
     return tt
 
-def featurespace(dataset, p):
-    cnames = dataset.columns.values
-    res = [[[0 for _ in range(len(cnames))] for _ in range(len(dataset))] for _ in range(p)]
-
+def featurespace(dtset, p):
+    cnames = dtset.columns.values
+    res = [[[0 for _ in range(len(cnames))] for _ in range(len(dtset))] for _ in range(p)]
+    print(len(cnames))
     for i in range(len(cnames)-1):
         flower = list(dataset.iloc[:, i])
-        for j in range(len(dataset)):
+        for j in range(len(dtset)-1):
             res[i][j] = np.array([flower[j]**i for i in range(p)])
-
+    # print('res', res)
     return np.asarray(res)
 
 def yspace(dset):
@@ -159,7 +167,7 @@ def supercore(tt, X):
     I = X[0].shape[1]
 
     Gright = np.dot(np.reshape(tt[D], (R, I)),X[D].transpose())
-    for i in [2,1]:
+    for i in [i for i in range(1,D)][::-1]:
         Gright = linalg.khatri_rao(X[i].transpose(),Gright)             # Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
         Gright = np.reshape(tt[i], (R, R * I)).dot(Gright)
     superCore = linalg.khatri_rao(X[0].transpose(),Gright)
@@ -195,19 +203,30 @@ def t_test(dset, I, iter):
 def ppinv(M):
     return np.linalg.inv(M.T*M) * M.T
 
+def seper(file):
+    df_comma = pd.read_csv(file, nrows=1, sep=",")
+    df_semi = pd.read_csv(file, nrows=1, sep=";")
+    if df_comma.shape[1] > df_semi.shape[1]:
+        print(",")
+    else:
+        print(";")
 
-iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
+
+iris = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv', index=False)
 irisdataset = iris.iloc[:,[1,2,3,4,5]]
-# wine = pd.read_csv('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv',delimeter=';')
+wine = pd.read_csv("/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv", sep=";")
 # print(wine)
+# seper('/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv')
 
+print(iris)
+print(irisdataset)
 #variables:
 I = 4 #nauwkeurigheid
 feature = 0
 iter = 1
 dataset = irisdataset
 
-t_test(irisdataset, I, iter)
+t_test(dataset, I, iter)
 
 
 print(time.process_time())
