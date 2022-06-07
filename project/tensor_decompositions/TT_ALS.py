@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 from scipy import linalg
 from sklearn.model_selection import train_test_split
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
 import time as time
+from matplotlib import pyplot as plt
+
 
 def initrandomtt(dataset,J, min, max,r=2):
     start = [np.random.randint(min,max,size=(r,1,J))]
@@ -103,9 +102,9 @@ def updateCore(tt,X,d,y):
     # print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
 
-def tt_ALS(tt,X,y,iter):
+def tt_ALS(tt,X,y):
     D= len(tt)-1
-    xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])
+    xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])           # ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])  #([[i for i in range(1,D)][::-1],[i for i in range(D+1)]])
     swipe = [x for xs in xss for x in xs]
     dims = []
 
@@ -114,14 +113,12 @@ def tt_ALS(tt,X,y,iter):
     for i in range(len(tt)):
         dims.append(tt[i].shape)
 
-    for i in range(0,iter):
-        for j in range(len(swipe)):
-            d = swipe[j]
+    for j in range(len(swipe)):
+        d = swipe[j]
 
-            newCore = updateCore(tt,X,d,y)
-
-            tt[d] = np.reshape(newCore,dims[d])
-            # print(tt)
+        newCore = updateCore(tt,X,d,y)
+        tt[d] = np.reshape(newCore,dims[d])
+        # print(tt)
 
     return tt
 
@@ -164,35 +161,44 @@ def supercore(tt, X):
 
     Gright = np.dot(np.reshape(tt[D], (R, I)),X[D].transpose())
     for i in [i for i in range(1,D)][::-1]:
-        Gright = linalg.khatri_rao(X[i].transpose(),Gright)             # Xi       # Gright = np.kron(np.reshape(Gright.transpose(),(1,300)),X) # Tweede
+        Gright = linalg.khatri_rao(Gright, X[i].transpose())
         Gright = np.reshape(tt[i], (R, R * I)).dot(Gright)
-    superCore = linalg.khatri_rao(X[0].transpose(),Gright)
+    superCore = linalg.khatri_rao(Gright, X[0].transpose())
     superCore = np.reshape(tt[0],(1,R*I)).dot(superCore).transpose()
 
     return superCore
 
 
-def t_test(dset, I, iter):
+def t_test(dset, I, acc, plot = True):
+    iter = 0
     train, test = train_test_split(dset,test_size=0.33)
     Xtrain = featurespace(train,I)
     Xtest = featurespace(test,I)
     y = yspace(train)
     yy = yclassifier(train, 0)
-    # print('yy',yy)
-    # print(y)
+    accuracy = 0
     tt = initrandomtt(dset, I,0,3,r=2)
-    traintt = tt_ALS(tt,Xtrain,yy,iter)
+    accs = []
+    for i in range(10):
+    # while (int(accuracy) < int(acc)):
+        tt = tt_ALS(tt,Xtrain,yy)
 
-    model = supercore(traintt, Xtrain)
-    # print(f'model = {model}')
-    #compare
-    count = 0
-    for i in range(len(model)):
-        if model[i] * yy[i] > 0:
-            count += 1
-            # print(np.round(model[i],1), model[i], y[i])
-    acc = (count/len(model)) * 100
-    print(f'accuracy is: {acc}')
+        model = supercore(tt, Xtest)
+        # print(f'model = {model}')
+        #compare
+        count = 0
+        for i in range(len(model)):
+            if model[i] * yy[i] > 0:
+                count += 1
+                # print(np.round(model[i],1), model[i], y[i])
+        accuracy = np.round((count/len(model)) * 100,2)
+        accs.append(accuracy)
+        iter += 1
+        print(f'At iteration {iter}, accuracy = {accuracy}')
+    if plot == True:
+        plt.plot(accs)
+        plt.show()
+    print(f'accuracy is: {accuracy}, it took {iter} iterations')
 
 def ppinv(M):
     return np.linalg.inv(M.T*M) * M.T
@@ -212,20 +218,32 @@ def datareader(location):
                 inplace=True)
     return dframe
 
-#variables:
-iris = '/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv'
-indiaan = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv"
-wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv"
 
-I = 4 #nauwkeurigheid
-feature = 0
-iter = 1
-dataset = wine #iris #indiaan
+if __name__ == "__main__":
+    #datasets:
+    iris = '/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv'
+    indiaan = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv"
+    wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv"
 
-data = datareader(dataset)
+    #variables
+    I = 4 #nauwkeurigheid
+    feature = 0
+    accuracy = 90
+    dataset = iris #iris #indiaan #wine
 
-t_test(data, I, iter)
+    data = datareader(dataset)
+
+    t_test(data, I, accuracy)
+    #Metrics
+    print(time.process_time())
 
 
-print(time.process_time())
+"""
+voorwaarden dataset:
+- Laatste column is soort, mag ook een getal zijn
+- enkel numerieke waarden in overige columns
+- Accepteert comma en puntcomma seperated files
+- meer rijen dan columns
+- effectiever met grotere datasets
 
+"""
