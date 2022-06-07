@@ -12,22 +12,17 @@ from sklearn.model_selection import cross_val_score
 iris = "C:/Users/tommo/Downloads/iris.csv"
 
 
-def svm(dataset):
-    # Read the dataset
-    # dataset = pd.read_csv(dataset, header = 0 )
+def svm(dataset, miter=2, split=0.33):
 
-    colnames = list(dataset.iloc[:, -1].unique())
-
-    # print(dataset)
     # Encoding the categorical column
-    dataset = dataset.replace({"class": {"Iris-setosa": 1, "Iris-versicolor": 2, "Iris-virginica": 3}})
+    # dataset = dataset.replace({"class": {"Iris-setosa": 1, "Iris-versicolor": 2, "Iris-virginica": 3}})
     X = dataset.iloc[:, :-1]
     y = dataset.iloc[:, -1].values
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=split, random_state=0)
 
     # Create the SVM model
-    classifier = SVC(kernel='linear', random_state=0)
+    classifier = SVC(kernel='linear', random_state=0, max_iter=miter)
     classifier.fit(X_train, y_train)
     y_pred = classifier.predict(X_test)
 
@@ -36,7 +31,7 @@ def svm(dataset):
 
     accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
     naive_accuracy = (accuracies.mean() * 100)
-    naive_sd = (accuracies.std() * 100)
+    naive_sd = round((accuracies.std() * 100), 3)
     naive_time = round(time.process_time(), 3)
 
     print(f"Accuracy: {naive_accuracy} %")

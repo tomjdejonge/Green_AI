@@ -70,56 +70,10 @@ def import_csv_data(file):
 
 
 @anvil.server.callable
-def import_csv_data_2_calculate(file):
+def import_csv_data_2_calculate(file, miter, split):
     df = pd.read_csv(io.BytesIO(file.get_bytes()), header=0)
-    naive_accuracy, naive_sd, naive_time = svm(df)
+    naive_accuracy, naive_sd, naive_time = svm(df, miter, split)
     return naive_accuracy, naive_sd, naive_time
-
-
-# @anvil.server.callable
-# def store_data(file):
-#     with anvil.media.TempFile(file) as file_name:
-#         if file.content_type == 'text/csv':
-#             df = pd.read_csv(file_name)
-#         else:
-#             df = pd.read_excel(file_name)
-#         for d in df.to_dict(orient="records"):
-#             # d is now a dict of {columnname -> value} for this row
-#             # We use Python's **kwargs syntax to pass the whole dict as
-#             # keyword arguments
-#             app_tables.data.add_row(**d)
-
-
-# io.BytesIO(image.get_bytes())
-
-# @anvil.server.callable
-# def svm(dataset):
-#     # Read the dataset
-#     dataset = pd.read_csv(dataset, header=0)
-#
-#     colnames = list(dataset.iloc[:, -1].unique())
-#
-#     # print(dataset)
-#     # Encoding the categorical column
-#     dataset = dataset.replace({"class": {"Iris-setosa": 1, "Iris-versicolor": 2, "Iris-virginica": 3}})
-#     X = dataset.iloc[:, :-1]
-#     y = dataset.iloc[:, -1].values
-#
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
-#
-#     # Create the SVM model
-#     classifier = SVC(kernel='linear', random_state=0)
-#     classifier.fit(X_train, y_train)
-#     y_pred = classifier.predict(X_test)
-#
-#     cm = confusion_matrix(y_test, y_pred)
-#     print(cm)
-#
-#     accuracies = cross_val_score(estimator=classifier, X=X_train, y=y_train, cv=10)
-#     print("Accuracy: {:.2f} %".format(accuracies.mean() * 100))
-#     print("Standard Deviation: {:.2f} %".format(accuracies.std() * 100))
-#
-#     print(time.process_time())
 
 
 @anvil.server.callable
