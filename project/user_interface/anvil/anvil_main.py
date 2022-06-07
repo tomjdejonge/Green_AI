@@ -14,6 +14,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
 from svm_orig import svm
+from als_orig import t_test
 
 anvil.server.connect('DH4R5MH3DTKYNYBPF63XKZLV-UHSXWMNTP7IBV2RQ')
 
@@ -53,7 +54,7 @@ def image_tensor_train(img, epsilon=0.1):
     new_image = border(np.array(reconstructed), 0, 255, p=True)
     error = np.sum(np.absolute(np.subtract(img, new_image)))
     total = np.sum(new_image)
-    accuracy_percentage = float(np.round((1 - (error / total)), 3))
+    accuracy_percentage = float(np.round((1 - (error / total)) * 100, 3))
     final_image = Image.fromarray(new_image.astype(np.uint8), 'RGB')
     bs = io.BytesIO()
     name = 'final_image'
@@ -63,17 +64,11 @@ def image_tensor_train(img, epsilon=0.1):
 
 
 @anvil.server.callable
-def import_csv_data(file):
-    with anvil.media.TempFile(file) as file_name:
-        # df = pd.read_csv(file_name)
-        return file_name
-
-
-@anvil.server.callable
-def import_csv_data_2_calculate(file, miter, split):
+def import_csv_data_2_calculate(file, miter, split, I=1):
     df = pd.read_csv(io.BytesIO(file.get_bytes()), header=0)
     naive_accuracy, naive_sd, naive_time = svm(df, miter, split)
-    return naive_accuracy, naive_sd, naive_time
+    new_accuracy, new_time = t_test(df, I, miter, split)
+    return naive_accuracy, naive_sd, naive_time, new_accuracy, new_time
 
 
 @anvil.server.callable
