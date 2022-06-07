@@ -4,9 +4,10 @@ from scipy import linalg
 from sklearn.model_selection import train_test_split
 import time as time
 from matplotlib import pyplot as plt
+from svdtest import ttest
 
 
-def initrandomtt(dataset,J, min, max,r=2):
+def initrandomtt(dataset,J, min, max,r):
     start = [np.random.randint(min,max,size=(r,1,J))]
     for i in range(len(dataset.columns.values)-3):
         start.append(np.array([np.random.randint(min,max,size=(r,r,J))] ))
@@ -15,8 +16,8 @@ def initrandomtt(dataset,J, min, max,r=2):
     return np.array(start,dtype=object)
 
 
-def rightSuperCore(tt,X,d):
-    R = 2
+def rightSuperCore(tt,X,d,R):
+
     I = X[d].shape[1]
     D = len(tt)-1
     L = 1
@@ -41,8 +42,7 @@ def rightSuperCore(tt,X,d):
         Gright = linalg.khatri_rao(X[0].transpose(), Gright)
         return Gright"""
 
-def leftSuperCore(tt,X,d):
-    R = 2
+def leftSuperCore(tt,X,d, R):
     I = X[d].shape[1]
     D = len(tt)-1
     L = 1
@@ -63,25 +63,25 @@ def leftSuperCore(tt,X,d):
 
     return Gleft  # N x LRd
 
-def getUL(tt, X, d):
-    R = 2
+def getUL(tt, X, d,R):
+
     I = X[d].shape[1]
     D = len(tt)-1
     N = X[d].shape[0]
 
     if d == 0:
-        superCore = rightSuperCore(tt, X, d) # R2 x N
+        superCore = rightSuperCore(tt, X, d,R) # R2 x N
 
         return np.reshape(superCore, (N, I*R)) # NL x LR2
 
     elif d==D:
-        Gleft = leftSuperCore(tt, X, d)  # N x JLRd
+        Gleft = leftSuperCore(tt, X, d,R)  # N x JLRd
 
         return np.reshape(Gleft, (N, I * R))
 
 
-    Gright = rightSuperCore(tt, X, d)  # Rd1 x N
-    Gleft = leftSuperCore(tt, X, d)  # N x JLRd
+    Gright = rightSuperCore(tt, X, d,R)  # Rd1 x N
+    Gleft = leftSuperCore(tt, X, d,R)  # N x JLRd
 
     Gleft = np.reshape(Gleft, (min(Gleft.shape), max(Gleft.shape)))
     Gright = np.reshape(Gright, (min(Gright.shape), max(Gright.shape)))
@@ -90,9 +90,9 @@ def getUL(tt, X, d):
     return np.reshape(superCore, (N, R * I * R))  # NL x R2JR3
 
 
-def updateCore(tt,X,d,y):
+def updateCore(tt,X,d,y,R):
 
-    U = getUL(tt,X,d)
+    U = getUL(tt,X,d,R)
     # print(d,U)
     UTy = U.transpose().dot(np.reshape(y, (max(y.shape),1)))
 
@@ -104,7 +104,7 @@ def updateCore(tt,X,d,y):
     # print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
 
-def tt_ALS(tt,X,y):
+def tt_ALS(tt,X,y,R):
     D= len(tt)-1
     xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])           # ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])  #([[i for i in range(1,D)][::-1],[i for i in range(D+1)]])
     swipe = [x for xs in xss for x in xs]
@@ -118,18 +118,18 @@ def tt_ALS(tt,X,y):
     for j in range(len(swipe)):
         d = swipe[j]
 
-        newCore = updateCore(tt,X,d,y)
+        newCore = updateCore(tt,X,d,y,R)
         tt[d] = np.reshape(newCore,dims[d])
         # print(tt)
 
     return tt
 
-def featurespace(dataset, p):
-    cnames = dataset.columns.values
-    res = [[[0 for _ in range(p)] for _ in range(len(dataset))] for _ in range(len(cnames))]
+def featurespace(dtset, p):
+    cnames = dtset.columns.values
+    res = [[[0 for _ in range(p)] for _ in range(len(dtset))] for _ in range(len(cnames))]
     for i in range(len(cnames)-1):
-        flower = list(dataset.iloc[:, i])
-        for j in range(len(dataset)):
+        flower = list(dtset.iloc[:, i])
+        for j in range(len(dtset)):
 
             res[i][j] = np.array([flower[j]**i for i in range(p)])
 
@@ -158,43 +158,46 @@ def yclassifier(dset, x):
 def supercore(tt, X):
     #contract
     D = len(tt)-1
-    R = 2
     I = X[0].shape[1]
 
     Gright = np.dot(np.reshape(tt[D], (R, I)),X[D].transpose())
     for i in [i for i in range(1,D)][::-1]:
         Gright = linalg.khatri_rao(Gright, X[i].transpose())
-        Gright = np.reshape(tt[i], (R, R * I)).dot(Gright)
+        Gright= np.reshape(tt[i], (R, R * I)).dot(Gright)
     superCore = linalg.khatri_rao(Gright, X[0].transpose())
     superCore = np.reshape(tt[0],(1,R*I)).dot(superCore).transpose()
 
     return superCore
 
-
-def t_test(dset, I, iter, plot = True):
+def t_test(dset, I, iter, R, plot=False):
     train, test = train_test_split(dset,test_size=0.33)
     Xtrain = featurespace(train,I)
-    Xtest = featurespace(test,I)
+    # Xtest = featurespace(test,I)
     y = yspace(train)
-    yy = yclassifier(train, 0)
-    accuracy = 0
-    tt = initrandomtt(dset, I,0,3,r=2)
+    yc = yclassifier(train, 0)
+    # ntt = initrandomtt(train,I,-10,10,R)
     accs = []
+    ntt = np.asarray(ttest(data))
+    for i in range(len(ntt)):
+        print(ntt[i])
+
+
     for j in range(iter):
     # while (int(accuracy) < int(acc)):
-        tt = tt_ALS(tt,Xtrain,yy)
-        model = supercore(tt, Xtest)
+        ntt = tt_ALS(ntt,Xtrain,yc,R)
+
+        model = supercore(ntt, Xtrain)
         # print(f'model = {model}')
         #compare
         count = 0
         for i in range(len(model)):
-            if model[i] * yy[i] > 0:
+            # print(y[i], yc[i], model[i], (model[i] * yy[i]) >0, (model[i] * yy[i]))
+            if model[i] * yc[i] >= 0:
                 count += 1
                 # print(np.round(model[i],1), model[i], y[i])
         accuracy = np.round((count/len(model)) * 100,2)
         accs.append(accuracy)
-        iter += 1
-        print(f'At iteration {j}, accuracy = {accuracy}')
+        print(f'At iteration {j+1}, accuracy = {accuracy}')
     if plot == True:
         plt.plot(accs)
         plt.show()
@@ -226,14 +229,15 @@ if __name__ == "__main__":
     wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv"
 
     #variables
-    I = 4 #nauwkeurigheid
+    I = 3 #nauwkeurigheid
+    R = 4 #Rank
     feature = 0
     iter = 10
     dataset = iris #iris #indiaan #wine
 
     data = datareader(dataset)
 
-    t_test(data, I, iter)
+    t_test(data, I, iter, R)
     #Metrics
     print(time.process_time())
 

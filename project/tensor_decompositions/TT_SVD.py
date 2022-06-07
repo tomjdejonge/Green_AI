@@ -3,14 +3,12 @@ import tensorly as tl
 import numpy as np
 from scipy import linalg
 import matplotlib.pyplot as plt
-from torchstat import stat
-import torchvision.models as models
-import tensorflow as tf
+import anvil.server
 
 
 # Original file: T_train.py (method 1) ---------------------------------------------------------------------------------
 
-
+@anvil.server.callable
 class TT(object):
 
     def __init__(self, x, threshold=0, max_rank=np.infty, string=None):
@@ -144,7 +142,7 @@ class TT(object):
         # print(full_tensor)
         return np.array(np.reshape(full_tensor, (512, 512, 3)))
 
-
+@anvil.server.callable
 def imshow(image):
     img = Image.fromarray(image)
     img.show()
@@ -152,7 +150,7 @@ def imshow(image):
 
 # Original file: T_Traintex (method 2): --------------------------------------------------------------------------------
 
-
+@anvil.server.callable
 def tensortrain(img, epsilon=0.1):
     img = np.reshape(np.asarray(img), (4, 4, 4, 4, 4, 4, 4, 4, 4, 3))
     n = img.shape
@@ -192,7 +190,7 @@ def tensortrain(img, epsilon=0.1):
     # print(f'norm of core = {linalg.norm(img)}')
     return g, d, r, n
 
-
+@anvil.server.callable
 def tt_reconstruction(cores, d, r, n):
     r = list(r.astype(np.uint))
 
@@ -207,7 +205,7 @@ def tt_reconstruction(cores, d, r, n):
 
     return np.array(np.reshape(full_tensor, (512, 512, 3)))
 
-
+@anvil.server.callable
 def compare(image1, image2):
     f = plt.figure()
     f.add_subplot(1, 2, 1)
@@ -218,7 +216,7 @@ def compare(image1, image2):
     plt.axis('off')
     plt.show()
 
-
+@anvil.server.callable
 def border(img, low, high, p=False):
     lowcount = 0
     highcount = 0
@@ -237,7 +235,7 @@ def border(img, low, high, p=False):
     # print(lowcount,highcount)
     return img
 
-
+@anvil.server.callable
 def check(tensor, tt, epsilon, d, r, n):
     error = np.linalg.norm(tt_reconstruction(tt, d, r, n) - tensor) / np.linalg.norm(tensor)
     n = len(tt) - 1
@@ -250,7 +248,7 @@ def check(tensor, tt, epsilon, d, r, n):
 
 # Original file: test.py (method 3): -----------------------------------------------------------------------------------
 
-
+@anvil.server.callable
 def validate_tt_rank(tensor_shape, rank='same', constant_rank=False, rounding='round',
                      allow_overparametrization=True):
 
@@ -344,7 +342,7 @@ def validate_tt_rank(tensor_shape, rank='same', constant_rank=False, rounding='r
 
         return validated_rank
 
-
+@anvil.server.callable
 def tensor_train(input_tensor, rank, verbose=False):
 
     rank = validate_tt_rank(tl.shape(input_tensor), rank=rank)
@@ -385,7 +383,7 @@ def tensor_train(input_tensor, rank, verbose=False):
 
     return factors
 
-
+@anvil.server.callable
 def tensor_train_matrix(tensor, rank):
 
     order = tl.ndim(tensor)
@@ -413,7 +411,7 @@ def tensor_train_matrix(tensor, rank):
 
     return TTMatrix(factors)
 
-
+@anvil.server.callable
 def tt_to_tensor(factors):
 
     if isinstance(factors, (float, int)): #0-order tensor
@@ -430,6 +428,8 @@ def tt_to_tensor(factors):
 
     return tl.reshape(full_tensor, full_shape)
 
+
+@anvil.server.callable
 def compare(image1, image2):
     f = plt.figure()
     f.add_subplot(1,2, 1)
@@ -493,21 +493,5 @@ def main():
         new_image = Image.fromarray((B).astype(np.uint8),'RGB')
         compare(new_image, new_image)
 
-def flopcounter():
-    model = models.resnet18()
-    res = stat(model, (3, 224, 224))
-
-    print(stat(model, (3, 224, 224)))
-
-def calculate_flops():
-    # Print to stdout an analysis of the number of floating point operations in the
-    # model broken down by individual operations.
-    tf.profiler.profile(
-        tf.get_default_graph(),
-        options=tf.profiler.ProfileOptionBuilder.float_operation(), cmd='scope')
-
 if __name__ == "__main__":
-
     main()
-    flopcounter()
-    # calculate_flops()
