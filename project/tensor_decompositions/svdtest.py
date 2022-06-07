@@ -23,80 +23,128 @@ def datareader(location):
     return dframe
 
 
-def tensortrain(img, epsilon=0.1):
-    img = np.reshape(np.asarray(img), (5,5,2,2,3,2))
-    n = img.shape
-    d = len(n)
-    delta = (epsilon / np.sqrt(d - 1)) * np.linalg.norm(img)
-    r = np.zeros(d + 1)
-    r[0] = 1
-    r[-1] = 1
-    g = []
-    c = img.copy()
+class TT(object):
 
-    for k in range(d - 1):
-        m = int(r[k] * n[k])  # r_(k-1)*n_k
-        b = int(c.size / m)  # numel(C)/r_(k-1)*n_k
-        c = np.reshape(c, [m, b])
-        [U, S, V] = linalg.svd(c, full_matrices=False)
-        V = V.transpose()
-        S = np.diag(S)
-        s = np.diagonal(S)
-        s = np.reshape(s, (s.shape[0], 1))
-        rank = 0
-        error = np.linalg.norm(s[rank + 1])
-        while error > delta:
-            rank += 1
-            error = np.linalg.norm(s[rank + 1:])
-        r[k + 1] = rank + 1
+    def __init__(self, x, threshold=0, max_rank=np.infty, string=None):
 
-        g.append(np.reshape(U[:, :int(r[k + 1])], [int(r[k]), int(n[k]), int(r[k + 1])]))
-        p_1 = S[:int(r[k + 1]), :int(r[k + 1])]
-        p_2 = V[:, :int(r[k + 1])]
-        c = p_1 @ p_2.transpose()
+        # initialize from list of cores
+        if isinstance(x, list):
 
-    g.append(np.reshape(c, (int(r[- 2]), int(n[- 1]), int(r[-1]), 1)))
-    # g.append(len(g))
-    # for i in range(len(g)):
-    #     print(f'norm of core {i+1} = {linalg.norm(g[i])}')
-    # print(f'norm of core = {linalg.norm(img)}')
-    count = 0
-    for core in g:
-        for x in core:
-            for y in x:
-                for i in y:
-                    count += 1
-    print(f'{count} items in tt')
-    return g, d, r, n
+            # check if orders of list elements are correct
+            if np.all([x[i].ndim == 4 for i in range(len(x))]):
+
+                # check if ranks are correct
+                if np.all([x[i].shape[3] == x[i + 1].shape[0] for i in range(len(x) - 1)]):
+
+                    # define order, row dimensions, column dimensions, ranks, and cores
+                    self.order = len(x)
+                    self.row_dims = [x[i].shape[1] for i in range(self.order)]
+                    self.col_dims = [x[i].shape[2] for i in range(self.order)]
+                    self.ranks = [x[i].shape[0] for i in range(self.order)] + [x[-1].shape[3]]
+                    self.cores = x
+
+                else:
+                    raise ValueError('Shapes of list elements do not match.')
+
+            else:
+                raise ValueError('List elements must be 4-dimensional arrays.')
+
+        # initialize from full array
+        elif isinstance(x, np.ndarray):
+
+            # check if order of ndarray is a multiple of 2
+            if np.mod(x.ndim, 2) == 0:
+
+                # show progress
+                if string is None:
+                    string = 'HOSVD'
+
+                # define order, row dimensions, column dimensions, ranks, and cores
+                order = len(x.shape) // 2
+                row_dims = x.shape[:order]
+                col_dims = x.shape[order:]
+                ranks = [1] * (order + 1)
+                cores = []
+
+                # permute dimensions, e.g., for order = 4: p = [0, 4, 1, 5, 2, 6, 3, 7]
+                p = [order * j + i for i in range(order) for j in range(2)]
+
+                y = np.transpose(x, p).copy()
+
+                # decompose the full tensor
+                for i in range(order - 1):
+                    # reshape residual tensor
+                    m = ranks[i] * row_dims[i] * col_dims[i]
+                    n = np.prod(row_dims[i + 1:]) * np.prod(col_dims[i + 1:])
+                    y = np.reshape(y, [m, n])
+
+                    # apply SVD in order to isolate modes
+                    [u, s, v] = linalg.svd(y, full_matrices=False)
+                    # print(y.shape)
+                    # rank reduction
+                    if threshold != 0:
+                        indices = np.where(s / s[0] > threshold)[0]
+                        u = u[:, indices]
+                        s = s[indices]
+                        v = v[indices, :]
+                    if max_rank != np.infty:
+                        u = u[:, :np.minimum(u.shape[1], max_rank)]
+                        s = s[:np.minimum(s.shape[0], max_rank)]
+                        v = v[:np.minimum(v.shape[0], max_rank), :]
+
+                    # define new TT core
+                    ranks[i + 1] = u.shape[1]
+                    cores.append(np.reshape(u, [ranks[i], row_dims[i], col_dims[i], ranks[i + 1]]))
+
+                    # set new residual tensor
+                    y = np.diag(s).dot(v)
 
 
-def tt_reconstruction(cores, d, r, n):
-    r = list(r.astype(np.uint))
+                # define last TT core
+                cores.append(np.reshape(y, [ranks[-2], row_dims[-1], col_dims[-1], 1]))
 
-    n = list(n)
-    full_tensor = np.reshape(cores[0], (int(n[0]), int(r[1])))
+                # initialize tensor train
+                self.__init__(cores)
 
-    for k in range(1, d):
-        full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]), int(n[k]) * int(r[k + 1])))
-        full_tensor = full_tensor.reshape(np.prod(n[:k + 1]), int(r[k + 1]))
 
-    # q = [2* i for i in range(d//2)] + [1+2*i for i in range(d//2)]
+            else:
+                raise ValueError('Number of dimensions must be a multiple of 2.')
 
-    return np.array(np.reshape(full_tensor, (512, 512, 3)))
+        else:
+            raise TypeError('Parameter must be either a list of cores or an ndarray.')
 
-def tt_reconstruction(cores, d, r, n):
-    r = list(r.astype(np.uint))
+    def __repr__(self):
+        return ('\n'
+                'Tensor train with order    = {d}, \n'
+                '                  row_dims = {m}, \n'
+                '                  col_dims = {n}, \n'
+                '                  ranks    = {r}'.format(d=self.order, m=self.row_dims, n=self.col_dims, r=self.ranks))
 
-    n = list(n)
-    full_tensor = np.reshape(cores[0], (int(n[0]), int(r[1])))
+    def full(self):
 
-    for k in range(1, d):
-        full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]), int(n[k]) * int(r[k + 1])))
-        full_tensor = full_tensor.reshape(np.prod(n[:k + 1]), int(r[k + 1]))
+        if self.ranks[0] != 1 or self.ranks[-1] != 1:
+            raise ValueError("The first and last rank have to be 1!")
 
-    # q = [2* i for i in range(d//2)] + [1+2*i for i in range(d//2)]
+        # reshape first core
+        full_tensor = self.cores[0].reshape(self.row_dims[0] * self.col_dims[0], self.ranks[1])
 
-    return np.array(np.reshape(full_tensor, (512, 512, 3)))
+        for i in range(1, self.order):
+            # contract full_tensor with next TT core and reshape
+            full_tensor = full_tensor.dot(self.cores[i].reshape(self.ranks[i],
+                                                                self.row_dims[i] * self.col_dims[i] * self.ranks[
+                                                                    i + 1]))
+            full_tensor = full_tensor.reshape(np.prod(self.row_dims[:i + 1]) * np.prod(self.col_dims[:i + 1]),
+                                              self.ranks[i + 1])
+
+        # reshape and transpose full_tensor
+        p = [None] * 2 * self.order
+        p[::2] = self.row_dims
+        p[1::2] = self.col_dims
+        q = [2 * i for i in range(self.order)] + [1 + 2 * i for i in range(self.order)]
+
+        full_tensor = full_tensor.reshape(p).transpose(q)
+
+        return full_tensor
 
 iris = '/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv'
 indiaan = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv"
@@ -104,21 +152,63 @@ wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequ
 
 
 dataset = iris #iris #indiaan #wine
+data = datareader(dataset)
 
 def ttest(data):
     data.drop(columns=data.columns[-1],
                     axis=1,
                     inplace=True)
+    data = data.values.tolist()
+    data = np.reshape(data,(5,5,4,6))
+    dog = TT.full(TT(data, threshold=0.1))
 
-    core, d, r, n = tensortrain(data)
-    recon = tt_reconstruction(core, d, r, n)
+    return dog
 
-    print(recon)
-    return core
+def initrandomtt(dataset,J, min, max,r):
+    start = [np.random.randint(min,max,size=(r,1,J))]
+    for i in range(len(dataset.columns.values)-3):
+        start.append(np.array([np.random.randint(min,max,size=(r,r,J))] ))
+    start.append(np.array([np.random.randint(min,max,size=(1,r,J))]))
 
-ttest(dataset)
+    return np.array(start,dtype=object)
 
 
+def flatten(ttest):
+    listt = []
+    for i in ttestt:
+        for j in i:
+            for k in j:
+                for x in k:
+                    listt.append(x)
+    return listt
 
+def shaper(tt, R, I):
+    # print(len(tt))
+    temp1 = []
+    for i in range(R*I):
+        temp1.append(tt.pop(i))
+    first = np.reshape(temp1, (R,1,I))
+    temp2 = []
+    for i in range(R * I):
+        temp2.append(tt.pop(i))
+    last = np.reshape(temp2, (1,R,I))
+    over = len(tt)
+    midden = []
+    while len(tt) != 0:
+        temp3 = []
+        for i in range(R * I):
+            temp3.append(tt.pop(i))
+        midden.append(np.reshape(temp3, (R, R, I)))
 
-
+ttestt = ttest(data)
+vlak = (flatten(ttest))
+for R in range(10):
+    for I in range(10):
+        try:
+            shaper(vlak,R,I)
+        except:
+            print(R,I,'werkt niet')
+        else:
+            print(R,I)
+        finally:
+            print('niks')
