@@ -84,7 +84,19 @@ def tt_reconstruction(cores, d, r, n):
 
     return np.array(np.reshape(full_tensor, (512, 512, 3)))
 
+def tt_reconstruction(cores, d, r, n):
+    r = list(r.astype(np.uint))
 
+    n = list(n)
+    full_tensor = np.reshape(cores[0], (int(n[0]), int(r[1])))
+
+    for k in range(1, d):
+        full_tensor = full_tensor.dot(cores[k].reshape(int(r[k]), int(n[k]) * int(r[k + 1])))
+        full_tensor = full_tensor.reshape(np.prod(n[:k + 1]), int(r[k + 1]))
+
+    # q = [2* i for i in range(d//2)] + [1+2*i for i in range(d//2)]
+
+    return np.array(np.reshape(full_tensor, (512, 512, 3)))
 
 iris = '/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv'
 indiaan = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv"
@@ -99,9 +111,12 @@ def ttest(data):
                     inplace=True)
 
     core, d, r, n = tensortrain(data)
+    recon = tt_reconstruction(core, d, r, n)
+
+    print(recon)
     return core
 
-
+ttest(dataset)
 
 
 

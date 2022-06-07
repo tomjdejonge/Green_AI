@@ -178,8 +178,7 @@ def t_test(dset, I, iter, R, plot=False):
     # ntt = initrandomtt(train,I,-10,10,R)
     accs = []
     ntt = np.asarray(ttest(data))
-    for i in range(len(ntt)):
-        print(ntt[i])
+
 
 
     for j in range(iter):
