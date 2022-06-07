@@ -48,11 +48,12 @@ def leftSuperCore(tt,X,d):
     L = 1
     N = X[d].shape[0]
 
-
+    # print(X[0].dot(np.reshape(tt[0],(I,R))) == np.reshape(tt[0],(R,I)).dot(X[0].transpose()))
     Gleft = np.reshape(tt[0],(R,I)).dot(X[0].transpose())
     if d == 1:
         return Gleft
     for i in range(1,d):
+
         Gleft = linalg.khatri_rao(Gleft, X[i].transpose())
         Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[i],(I*R, R)))
         Gleft = np.reshape(Gleft, (min(Gleft.shape),max(Gleft.shape)))
@@ -92,6 +93,7 @@ def getUL(tt, X, d):
 def updateCore(tt,X,d,y):
 
     U = getUL(tt,X,d)
+    # print(d,U)
     UTy = U.transpose().dot(np.reshape(y, (max(y.shape),1)))
 
     UTU = U.transpose().dot(U)
@@ -169,8 +171,7 @@ def supercore(tt, X):
     return superCore
 
 
-def t_test(dset, I, acc, plot = True):
-    iter = 0
+def t_test(dset, I, iter, plot = True):
     train, test = train_test_split(dset,test_size=0.33)
     Xtrain = featurespace(train,I)
     Xtest = featurespace(test,I)
@@ -179,10 +180,9 @@ def t_test(dset, I, acc, plot = True):
     accuracy = 0
     tt = initrandomtt(dset, I,0,3,r=2)
     accs = []
-    for i in range(10):
+    for j in range(iter):
     # while (int(accuracy) < int(acc)):
         tt = tt_ALS(tt,Xtrain,yy)
-
         model = supercore(tt, Xtest)
         # print(f'model = {model}')
         #compare
@@ -194,7 +194,7 @@ def t_test(dset, I, acc, plot = True):
         accuracy = np.round((count/len(model)) * 100,2)
         accs.append(accuracy)
         iter += 1
-        print(f'At iteration {iter}, accuracy = {accuracy}')
+        print(f'At iteration {j}, accuracy = {accuracy}')
     if plot == True:
         plt.plot(accs)
         plt.show()
@@ -228,14 +228,15 @@ if __name__ == "__main__":
     #variables
     I = 4 #nauwkeurigheid
     feature = 0
-    accuracy = 90
+    iter = 10
     dataset = iris #iris #indiaan #wine
 
     data = datareader(dataset)
 
-    t_test(data, I, accuracy)
+    t_test(data, I, iter)
     #Metrics
     print(time.process_time())
+
 
 
 """
