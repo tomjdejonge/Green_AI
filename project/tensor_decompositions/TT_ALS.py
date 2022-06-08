@@ -4,33 +4,34 @@ from scipy import linalg
 from sklearn.model_selection import train_test_split
 import time as time
 from matplotlib import pyplot as plt
-from svdtest import ttest
+# from svdtest import ttest
 
 
-def initrandomtt(dataset,J, min, max,r):
-    start = [np.random.randint(min,max,size=(r,1,J))]
+def initrandomtt(dataset, J, min, max, r):
+    start = [np.random.randint(min,max,size=(r, 1, J))]
     for i in range(len(dataset.columns.values)-3):
-        start.append(np.array([np.random.randint(min,max,size=(r,r,J))] ))
+        start.append(np.array([np.random.randint(min,max,size=(r, r, J))]))
     start.append(np.array([np.random.randint(min,max,size=(1,r,J))]))
 
-    return np.array(start,dtype=object)
+    return np.array(start, dtype=object)
 
 
 def rightSuperCore(tt,X,d,R):
-
-    I = X[d].shape[1]
-    D = len(tt)-1
-    L = 1
     N = X[d].shape[0]
     D = len(tt)-1
-    a = np.arange(d+2, D+1, 1).tolist()[::-1]
 
+    I = tt[D].shape[-1]
+
+    #reshape, contract last core
     Gright = np.dot(np.reshape(tt[D],(R,I)),X[D].transpose())
-    # print(f'{d, a}')
-    for i in a:
-        Gright = linalg.khatri_rao(Gright, X[i-1].transpose())
-        Gright = np.reshape(tt[i-1], (R, R*I)).dot(Gright)
 
+    for i in np.arange(d+1, D, 1).tolist()[::-1]:
+        print(d,i)
+        # dotkron reshape contract middle cores
+        Gright = linalg.khatri_rao(Gright, X[i].transpose())
+        Gright = np.reshape(tt[i], (R, R*I)).dot(Gright)
+
+    # last dotkron
     Gright = linalg.khatri_rao(Gright, X[d].transpose())
 
     return Gright
@@ -48,17 +49,18 @@ def leftSuperCore(tt,X,d, R):
     L = 1
     N = X[d].shape[0]
 
-    # print(X[0].dot(np.reshape(tt[0],(I,R))) == np.reshape(tt[0],(R,I)).dot(X[0].transpose()))
+    #reshape first core, cotract
     Gleft = np.reshape(tt[0],(R,I)).dot(X[0].transpose())
     if d == 1:
         return Gleft
     for i in range(1,d):
-
+        # dotkron, contract, reshape for middel cores
         Gleft = linalg.khatri_rao(Gleft, X[i].transpose())
         Gleft = np.reshape(Gleft, (N, I*R)).dot(np.reshape(tt[i],(I*R, R)))
         Gleft = np.reshape(Gleft, (min(Gleft.shape),max(Gleft.shape)))
 
     if d ==D:
+        # only last dotkron if last core
         Gleft = linalg.khatri_rao(Gleft,X[D].transpose())
 
     return Gleft  # N x LRd
@@ -68,7 +70,7 @@ def getUL(tt, X, d,R):
     I = X[d].shape[1]
     D = len(tt)-1
     N = X[d].shape[0]
-
+    #combine both supercores, only with khatri rao if not first or last
     if d == 0:
         superCore = rightSuperCore(tt, X, d,R) # R2 x N
 
@@ -91,13 +93,14 @@ def getUL(tt, X, d,R):
 
 
 def updateCore(tt,X,d,y,R):
-
     U = getUL(tt,X,d,R)
-    # print(d,U)
+
     UTy = U.transpose().dot(np.reshape(y, (max(y.shape),1)))
 
     UTU = U.transpose().dot(U)
 
+    # choose one
+    # w = linalg.pinv(U).dot(y)
     w = linalg.inv(UTU).dot(UTy)
 
     #np.linalg.inv(M.T*M) * M.T
@@ -115,25 +118,41 @@ def tt_ALS(tt,X,y,R):
     for i in range(len(tt)):
         dims.append(tt[i].shape)
 
+    #iterate over the swipe
     for j in range(len(swipe)):
         d = swipe[j]
-
         newCore = updateCore(tt,X,d,y,R)
         tt[d] = np.reshape(newCore,dims[d])
         # print(tt)
-
     return tt
 
 def featurespace(dtset, p):
     cnames = dtset.columns.values
-    res = [[[0 for _ in range(p)] for _ in range(len(dtset))] for _ in range(len(cnames))]
+    alles = []
+
+    res = [[[0 for _ in range(p)] for _ in range(len(dtset))] for _ in range(len(cnames)-1)]
+    # print(len(dtset), len(cnames))
     for i in range(len(cnames)-1):
         flower = list(dtset.iloc[:, i])
         for j in range(len(dtset)):
 
-            res[i][j] = np.array([flower[j]**i for i in range(p)])
+            res[i][j] = [flower[j]**i for i in range(p)]
+            for h in res[i][j]:
+                alles.append(h)
+    #normalize the feature space
+    X = res.copy()
 
-    return np.asarray(res)
+    minv = np.min(alles)
+    maxv = np.max(alles)
+    print(minv,maxv)
+    for i in range(len(res)):
+
+        for x in range(len(res[i])):
+
+            for y in range(len(res[i][x])):
+                X[i][x][y] = (res[i][x][y] - minv)/(maxv-minv)
+    print(X)
+    return np.asarray(X)
 
 def yspace(dset):
     res = np.zeros((len(dset),1))
@@ -143,6 +162,7 @@ def yspace(dset):
         res[j] = uv.index(flower[j])
     return res
 
+# yclassifier, xth flower gets assigned 1, rest -1
 def yclassifier(dset, x):
     res = np.zeros((len(dset),1))
     uv = list(dset.iloc[:,-1].unique())
@@ -155,6 +175,7 @@ def yclassifier(dset, x):
             res[j] = -1
     return res
 
+# contract the weights (tt) with the values (X) to test
 def supercore(tt, X):
     #contract
     D = len(tt)-1
@@ -169,17 +190,19 @@ def supercore(tt, X):
 
     return superCore
 
+# function to test
 def t_test(dset, I, iter, R, plot=False):
     train, test = train_test_split(dset,test_size=0.33)
+
     Xtrain = featurespace(train,I)
+    # print(Xtrain)
     # Xtest = featurespace(test,I)
     y = yspace(train)
     yc = yclassifier(train, 0)
-    # ntt = initrandomtt(train,I,-10,10,R)
+    ntt = initrandomtt(train,I,-10,10,R)
     accs = []
-    ntt = np.asarray(ttest(data))
-
-
+    # ntt = np.asarray(ttest(data))
+    # naive(Xtrain,yc)
 
     for j in range(iter):
     # while (int(accuracy) < int(acc)):
@@ -220,6 +243,12 @@ def datareader(location):
                 inplace=True)
     return dframe
 
+def naive(X,y):
+
+    w = linalg.pinv(np.reshape(X,(150,16))).dot(np.reshape(y, (max(y.shape),1)))
+
+    print(w)
+
 
 if __name__ == "__main__":
     #datasets:
@@ -228,10 +257,10 @@ if __name__ == "__main__":
     wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv"
 
     #variables
-    I = 3 #nauwkeurigheid
-    R = 4 #Rank
+    I = 4 #nauwkeurigheid
+    R = 5 #Rank
     feature = 0
-    iter = 10
+    iter = 1
     dataset = iris #iris #indiaan #wine
 
     data = datareader(dataset)
