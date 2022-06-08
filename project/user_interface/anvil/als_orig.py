@@ -4,6 +4,7 @@ from scipy import linalg
 from sklearn.model_selection import train_test_split
 import time as time
 from matplotlib import pyplot as plt
+from time import process_time
 
 
 def initrandomtt(dataset,J, min, max,r=2):
@@ -172,6 +173,7 @@ def supercore(tt, X):
 
 
 def t_test(dset, I, iter, split=0.33, plot = False):
+    t_start = process_time()
     train, test = train_test_split(dset,test_size=split)
     Xtrain = featurespace(train,I)
     Xtest = featurespace(test,I)
@@ -199,7 +201,8 @@ def t_test(dset, I, iter, split=0.33, plot = False):
         plt.plot(accs)
         plt.show()
     # print(f'accuracy is: {accuracy}, it took {iter} iterations')
-    new_time = round(time.process_time(), 3)
+    t_stop = process_time()
+    new_time = float(t_stop - t_start)
     return accuracy, new_time
 
 def ppinv(M):
