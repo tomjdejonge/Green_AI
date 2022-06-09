@@ -6,16 +6,18 @@ import time as time
 from matplotlib import pyplot as plt
 import pdb
 
+
 # from svdtest import ttest
 def dotkron(A, B):
     N, DA = A.shape
     N, DB = B.shape
-    temp = np.ones((N,DA*DB))
+    temp = np.ones((N, DA * DB))
     for n in range(N):
         # print(n)
-        temp[n,:] = np.kron(A[n,:],B[n,:]).transpose()
+        temp[n, :] = np.kron(A[n, :], B[n, :]).transpose()
         # print(np.kron(A[n,:],B[n,:]))
     return temp
+
 
 """function dotkron(A::Matrix{Float64},B::Matrix{Float64})
     (N,DA) = size(A);
@@ -29,36 +31,38 @@ def dotkron(A, B):
 
 end"""
 
+
 def initrandomtt(dataset, J, min, max, r):
-    start = [np.random.randint(min,max,size=(r, 1, J))]
-    for i in range(len(dataset.columns.values)-3):
-        start.append(np.array([np.random.randint(min,max,size=(r, r, J))]))
-    start.append(np.array([np.random.randint(min,max,size=(1,r,J))]))
+    start = [np.random.randint(min, max, size=(r, 1, J))]
+    for i in range(len(dataset.columns.values) - 3):
+        start.append(np.array([np.random.randint(min, max, size=(r, r, J))]))
+    start.append(np.array([np.random.randint(min, max, size=(1, r, J))]))
 
     return np.array(start, dtype=object)
 
 
-def rightSuperCore(tt,X,d,R):
+def rightSuperCore(tt, X, d, R):
     N = X[d].shape[0]
-    D = len(tt)-1
+    D = len(tt) - 1
 
     I = tt[D].shape[-1]
 
-    #reshape, contract last core
-    Gright = np.dot(np.reshape(tt[D],(R,I)),X[D].transpose())   #Rd x N
+    # reshape, contract last core
+    Gright = np.dot(np.reshape(tt[D], (R, I)), X[D].transpose())  # Rd x N
 
-    for i in np.arange(d+1, D, 1).tolist()[::-1]:
-
+    for i in np.arange(d + 1, D, 1).tolist()[::-1]:
         # dotkron reshape contract middle cores
-        Gright = dotkron(Gright.transpose(),X[i])   # N x I Ri
+        Gright = dotkron(Gright.transpose(), X[i])  # N x I Ri
 
-        Gright = np.reshape(tt[i], (R, R*I)).dot(Gright.transpose())  #Ri-1 x JRi * JRi x N -> Ri-1 x N
+        Gright = np.reshape(tt[i], (R, R * I)).dot(Gright.transpose())  # Ri-1 x JRi * JRi x N -> Ri-1 x N
 
     # last dotkron
 
-    Gright = dotkron(Gright.transpose(),X[d])
+    Gright = dotkron(Gright.transpose(), X[d])
 
-    return Gright.transpose()  #I R x N
+    return Gright.transpose()  # I R x N
+
+
 """  if d ==0:
         Gright = linalg.khatri_rao(X[2].transpose(), Gright)
         Gright = np.reshape(tt[2], (R, R * I)).dot(Gright)
@@ -67,62 +71,63 @@ def rightSuperCore(tt,X,d,R):
         Gright = linalg.khatri_rao(X[0].transpose(), Gright)
         return Gright"""
 
-def leftSuperCore(tt,X,d, R):
+
+def leftSuperCore(tt, X, d, R):
     I = X[d].shape[1]
-    D = len(tt)-1
+    D = len(tt) - 1
     L = 1
     N = X[d].shape[0]
 
     # reshape first core, contract
-    Gleft = (X[0])@ np.reshape(tt[0],(I,R))    # N x R
+    Gleft = (X[0]) @ np.reshape(tt[0], (I, R))  # N x R
     if d == 1:
         return Gleft
-    for i in range(1,d):
+    for i in range(1, d):
         # dotkron, contract, reshape for middle cores
 
-        Gleft = dotkron(Gleft, X[i])      # N x I R
+        Gleft = dotkron(Gleft, X[i])  # N x I R
 
         tt[i] = tt[i].reshape(R, R, I)
-        temp = np.transpose(tt[i], (2,0,1))         # I x R x R
+        temp = np.transpose(tt[i], (2, 0, 1))  # I x R x R
 
-        temp = np.reshape(temp,(I*R,R))           # I R x R
-        Gleft = Gleft @ temp              # N x R
+        temp = np.reshape(temp, (I * R, R))  # I R x R
+        Gleft = Gleft @ temp  # N x R
 
-    if d ==D:
+    if d == D:
         # only last dotkron if last core
         Gleft = dotkron(Gleft, X[D])
 
-    return Gleft                        # N x I R
+    return Gleft  # N x I R
 
-def getUL(tt, X, d,R):
 
+def getUL(tt, X, d, R):
     I = X[d].shape[1]
-    D = len(tt)-1
+    D = len(tt) - 1
     N = X[d].shape[0]
-    #combine both supercores, only with khatri rao if not first or last
+    # combine both supercores, only with khatri rao if not first or last
     if d == 0:
-        superCore = rightSuperCore(tt, X, d,R) # R2 x N
+        superCore = rightSuperCore(tt, X, d, R)  # R2 x N
 
-        return np.reshape(superCore, (N, I*R)) # NL x LR2
+        return np.reshape(superCore, (N, I * R))  # NL x LR2
 
-    elif d==D:
-        Gleft = leftSuperCore(tt, X, d,R)  # N x  I Rd
+    elif d == D:
+        Gleft = leftSuperCore(tt, X, d, R)  # N x  I Rd
         Gleft = np.reshape(Gleft, (N, I, R))
         Gleft = np.transpose(Gleft, (0, 2, 1))
-        Gleft = np.reshape(Gleft, (N, R*I))
+        Gleft = np.reshape(Gleft, (N, R * I))
 
         return np.reshape(Gleft, (N, I * R))
 
-    Gright = rightSuperCore(tt, X, d,R)  # I Rd1 x N
-    Gleft = leftSuperCore(tt, X, d,R)  # N x LRd
+    Gright = rightSuperCore(tt, X, d, R)  # I Rd1 x N
+    Gleft = leftSuperCore(tt, X, d, R)  # N x LRd
 
     superCore = dotkron(Gright.transpose(), Gleft)
 
-    return superCore # NL x R2JR3
+    return superCore  # NL x R2JR3
 
 
-def updateCore(tt,X,d,y,R):
-    U = getUL(tt,X,d,R)
+def updateCore(tt, X, d, y, R):
+    U = getUL(tt, X, d, R)
 
     # UTy = U.transpose()@(np.reshape(y, (max(y.shape),1)))
     #
@@ -132,28 +137,31 @@ def updateCore(tt,X,d,y,R):
     w = linalg.pinv(U).dot(y)
     # w = linalg.pinv(UTU)@(UTy)
 
-    #np.linalg.inv(M.T*M) * M.T
+    # np.linalg.inv(M.T*M) * M.T
     # print(f'd = {d}: U.shape = {U.shape}, y.shape = {y.shape}, UTy.shape = {UTy.shape}, UTU.shape = {UTU.shape}, w.shape = {w.shape}, UTU[0][0] = {U[0][0]} ')
     return w
 
-def tt_ALS(tt,X,y,R):
-    D= len(tt)-1
-    xss = ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])           # ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])  #([[i for i in range(1,D)][::-1],[i for i in range(D+1)]])
+
+def tt_ALS(tt, X, y, R):
+    D = len(tt) - 1
+    xss = ([[i for i in range(D + 1)], [i for i in range(1, D)][
+                                       ::-1]])  # ([[i for i in range(D+1)], [i for i in range(1,D)][::-1]])  #([[i for i in range(1,D)][::-1],[i for i in range(D+1)]])
     swipe = [x for xs in xss for x in xs]
     dims = []
 
-     # [collect(1:D)..., collect(D-1:-1:2)...] = [0,1,2,3,2,1]??
+    # [collect(1:D)..., collect(D-1:-1:2)...] = [0,1,2,3,2,1]??
 
     for i in range(len(tt)):
         dims.append(tt[i].shape)
 
-    #iterate over the swipe
+    # iterate over the swipe
     for j in range(len(swipe)):
         d = swipe[j]
-        newCore = updateCore(tt,X,d,y,R)
-        tt[d] = np.reshape(newCore,dims[d])
+        newCore = updateCore(tt, X, d, y, R)
+        tt[d] = np.reshape(newCore, dims[d])
         # print(tt)
     return tt
+
 
 def featurespace(dtset, p):
     cnames = dtset.columns.values
@@ -161,32 +169,33 @@ def featurespace(dtset, p):
     maxv = np.max(dtset)
     # print(minv, maxv)
 
-    res = [[[0 for _ in range(p)] for _ in range(len(dtset))] for _ in range(len(cnames)-1)]
-    for i in range(len(cnames)-1):
+    res = [[[0 for _ in range(p)] for _ in range(len(dtset))] for _ in range(len(cnames) - 1)]
+    for i in range(len(cnames) - 1):
         flower = list(dtset.iloc[:, i])
         fmin = min(flower)
         fmax = max(flower)
 
         for j in range(len(dtset)):
+            res[i][j] = [(((flower[j] - fmin) / (fmax - fmin)) * 10) ** i for i in range(p)]
 
-            res[i][j] = [(((flower[j]-fmin)/(fmax - fmin))* 10)**i for i in range(p)]
-
-    #normalize the feature space
-    #(res - minv) / (maxv - minv)
+    # normalize the feature space
+    # (res - minv) / (maxv - minv)
     return np.asarray(res)
 
+
 def yspace(dset):
-    res = np.zeros((len(dset),1))
-    uv = list(dset.iloc[:,-1].unique())
+    res = np.zeros((len(dset), 1))
+    uv = list(dset.iloc[:, -1].unique())
     flower = list(dset.iloc[:, -1])
     for j in range(len(flower)):
         res[j] = uv.index(flower[j])
     return res
 
+
 # yclassifier, xth flower gets assigned 1, rest -1
 def yclassifier(dset, x):
-    res = np.zeros((len(dset),1))
-    uv = list(dset.iloc[:,-1].unique())
+    res = np.zeros((len(dset), 1))
+    uv = list(dset.iloc[:, -1].unique())
     flower = list(dset.iloc[:, -1])
 
     for j in range(len(flower)):
@@ -196,9 +205,10 @@ def yclassifier(dset, x):
             res[j] = -1
     return res
 
+
 # contract the weights (tt) with the values (X) to test
 def predict(tt, X, d=0):
-    #contract
+    # contract
     N = X[d].shape[0]
     D = len(tt) - 1
 
@@ -219,43 +229,46 @@ def predict(tt, X, d=0):
 
     return Gright.transpose()
 
-# function to test
-def t_test(dset, I, iter, R, plot=False):               #Predicting
-    train, test = train_test_split(dset,test_size=0.33)
 
-    Xtrain = featurespace(train,I)
+# function to test
+def t_test(dset, I, iter, R, plot=False):  # Predicting
+    train, test = train_test_split(dset, test_size=0.33)
+
+    Xtrain = featurespace(train, I)
     # print(Xtrain)
     # Xtest = featurespace(test,I)
     # y = yspace(train)
-    yc = yclassifier(train, 0)              #labels
-    ntt = initrandomtt(train,I,0,10,R)
+    yc = yclassifier(train, 0)  # labels
+    ntt = initrandomtt(train, I, 0, 5, R)
     accs = []
     # ntt = np.asarray(ttest(data))
     # naive(Xtrain,yc)
 
     for j in range(iter):
-    # while (int(accuracy) < int(acc)):
-        ntt = tt_ALS(ntt,Xtrain,yc,R)
+        # while (int(accuracy) < int(acc)):
+        ntt = tt_ALS(ntt, Xtrain, yc, R)
 
         model = predict(ntt, Xtrain)
         # print(f'model = {model}')
-        #compare
+        # compare
         count = 0
         for i in range(len(model)):
             # print(y[i], yc[i], model[i], (model[i] * yy[i]) >0, (model[i] * yy[i]))
             if model[i] * yc[i] >= 0:
                 count += 1
                 # print(np.round(model[i],1), model[i], y[i])
-        accuracy = np.round((count/len(model)) * 100,2)
+        accuracy = np.round((count / len(model)) * 100, 2)
         accs.append(accuracy)
-        print(f'At iteration {j+1}, accuracy = {accuracy}')
+        print(f'At iteration {j + 1}, accuracy = {accuracy}')
     if plot == True:
         plt.plot(accs)
         plt.show()
     print(f'accuracy is: {accuracy}, it took {iter} iterations')
 
+
 def ppinv(M):
-    return np.linalg.inv(M.T*M) * M.T
+    return np.linalg.inv(M.T * M) * M.T
+
 
 def datareader(location):
     df_comma = pd.read_csv(location, nrows=1, sep=",")
@@ -266,39 +279,37 @@ def datareader(location):
         sepp = ';'
     dframe = pd.read_csv(location, sep=sepp)
 
-    if len(dframe.iloc[:,0]) == dframe.iloc[-1,0] or len(dframe.iloc[:,0]) == dframe.iloc[-1,0] - 1:
+    if len(dframe.iloc[:, 0]) == dframe.iloc[-1, 0] or len(dframe.iloc[:, 0]) == dframe.iloc[-1, 0] - 1:
         dframe.drop(columns=dframe.columns[0],
-                axis=1,
-                inplace=True)
+                    axis=1,
+                    inplace=True)
     return dframe
 
-def naive(X,y):
 
-    w = linalg.pinv(np.reshape(X,(150,16))).dot(np.reshape(y, (max(y.shape),1)))
+def naive(X, y):
+    w = linalg.pinv(np.reshape(X, (150, 16))).dot(np.reshape(y, (max(y.shape), 1)))
 
     print(w)
 
 
 if __name__ == "__main__":
-    #datasets:
+    # datasets:
     iris = '/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/Iris.csv'
     indiaan = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/pima-indians-diabetes.csv"
     wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv"
 
-    #variables
-    I = 4 #nauwkeurigheid
-    R = 5 #Rank
+    # variables
+    I = 4  # nauwkeurigheid
+    R = 5  # Rank
     feature = 0
     iter = 5
-    dataset = iris #iris #indiaan #wine
+    dataset = iris  # iris #indiaan #wine
 
     data = datareader(dataset)
 
     t_test(data, I, iter, R)
-    #Metrics
+    # Metrics
     print(time.process_time())
-
-
 
 """
 voorwaarden dataset:
