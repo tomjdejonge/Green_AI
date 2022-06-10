@@ -232,6 +232,7 @@ def predict(tt, X, d=0):
 
 # function to test
 def t_test(dset, I, iter, R, plot=False):  # Predicting
+    start = time.process_time()
     train, test = train_test_split(dset, test_size=0.33)
 
     Xtrain = featurespace(train, I)
@@ -264,6 +265,9 @@ def t_test(dset, I, iter, R, plot=False):  # Predicting
         plt.plot(accs)
         plt.show()
     print(f'accuracy is: {accuracy}, it took {iter} iterations')
+    stop = time.process_time()
+    return (start-stop)
+
 
 
 def ppinv(M):
@@ -307,9 +311,10 @@ if __name__ == "__main__":
 
     data = datareader(dataset)
 
-    t_test(data, I, iter, R)
+    # t_test(data, I, iter, R)
+    print(recommend(data))
     # Metrics
-    print(time.process_time())
+
 
 """
 voorwaarden dataset:
@@ -320,3 +325,16 @@ voorwaarden dataset:
 - effectiever met grotere datasets
 
 """
+def recommend(dset):
+    iteratations = np.arrange(0,20)
+    times
+    for ep in iteratations:
+
+        print(f'calculating ep {ep}')
+
+        times.append(t_test(dset, 4, ep, 4))
+
+    return iterations, times
+
+
+
