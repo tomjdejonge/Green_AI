@@ -19,19 +19,6 @@ def dotkron(A, B):
     return temp
 
 
-"""function dotkron(A::Matrix{Float64},B::Matrix{Float64})
-    (N,DA) = size(A);
-    (N,DB) = size(B);
-    temp = ones(N,DA*DB);
-    for n = 1:N
-        temp[n,:] = kron(A[n,:],B[n,:])';
-    end
-
-    return temp
-
-end"""
-
-
 def initrandomtt(dataset, J, min, max, r):
     start = [np.random.randint(min, max, size=(r, 1, J))]
     for i in range(len(dataset.columns.values) - 3):
@@ -207,7 +194,7 @@ def yclassifier(dset, x):
 
 
 # contract the weights (tt) with the values (X) to test
-def predict(tt, X, d=0):
+def predict(tt, X, R, d=0):
     # contract
     N = X[d].shape[0]
     D = len(tt) - 1
@@ -229,6 +216,22 @@ def predict(tt, X, d=0):
 
     return Gright.transpose()
 
+def naive(X, y):
+    # print(X.shape, y.shape)
+    # print(X)
+    X = np.reshape(X, (100,16))
+    # print(f'2 = {X[0]}')
+    w = linalg.pinv(X).dot(y)
+    yhat = X.dot(w)
+    count = 0
+    for i in range(len(yhat)):
+
+        if yhat[i] * y[i] >= 0:
+            count += 1
+
+    accuracy = np.round((count / len(yhat)) * 100, 2)
+    print(accuracy)
+    print(w.shape)
 
 # function to test
 def t_test(dset, I, iter, R, plot=False):  # Predicting
@@ -243,13 +246,13 @@ def t_test(dset, I, iter, R, plot=False):  # Predicting
     ntt = initrandomtt(train, I, 0, 5, R)
     accs = []
     # ntt = np.asarray(ttest(data))
-    # naive(Xtrain,yc)
+    naive(Xtrain,yc)
 
     for j in range(iter):
         # while (int(accuracy) < int(acc)):
         ntt = tt_ALS(ntt, Xtrain, yc, R)
 
-        model = predict(ntt, Xtrain)
+        model = predict(ntt, Xtrain, R)
         # print(f'model = {model}')
         # compare
         count = 0
@@ -266,7 +269,7 @@ def t_test(dset, I, iter, R, plot=False):  # Predicting
         plt.show()
     print(f'accuracy is: {accuracy}, it took {iter} iterations')
     stop = time.process_time()
-    return (start-stop)
+    return (stop-start)
 
 
 
@@ -290,10 +293,18 @@ def datareader(location):
     return dframe
 
 
-def naive(X, y):
-    w = linalg.pinv(np.reshape(X, (150, 16))).dot(np.reshape(y, (max(y.shape), 1)))
 
-    print(w)
+
+def recommend(dset):
+    iterations = np.arange(1,20)
+    times = []
+    for ep in iterations:
+
+        print(f'calculating ep {ep}')
+
+        times.append(t_test(dset, 4, ep, 4))
+
+    return iterations, times
 
 
 if __name__ == "__main__":
@@ -310,9 +321,11 @@ if __name__ == "__main__":
     dataset = iris  # iris #indiaan #wine
 
     data = datareader(dataset)
-
-    # t_test(data, I, iter, R)
-    print(recommend(data))
+    # iterations, times = recommend(data)
+    # plt.plot(iterations, times)
+    # plt.show()
+    t_test(data, I, iter, R)
+    # print(recommend(data))
     # Metrics
 
 
@@ -325,16 +338,6 @@ voorwaarden dataset:
 - effectiever met grotere datasets
 
 """
-def recommend(dset):
-    iteratations = np.arrange(0,20)
-    times
-    for ep in iteratations:
-
-        print(f'calculating ep {ep}')
-
-        times.append(t_test(dset, 4, ep, 4))
-
-    return iterations, times
 
 
 
