@@ -18,6 +18,9 @@ def dotkron(A, B):
         # print(np.kron(A[n,:],B[n,:]))
     return temp
 
+def ppinv(M):
+    return np.linalg.inv(M.transpose().dot(M)).dot(M.T)
+
 
 def initrandomtt(dataset, J, min, max, r):
     start = [np.random.randint(min, max, size=(r, 1, J))]
@@ -216,18 +219,34 @@ def predict(tt, X, R, d=0):
 
     return Gright.transpose()
 
-def naive(X, y):
-    # print(X.shape, y.shape)
-    # print(X)
+def naive(y, datas):
+    print(datas)
+    cnames = datas.columns.values
+    p = 4
+
+    # print(minv, maxv)
+
+    res = [[0 for _ in range(p)] for _ in range(len(datas))]
+    for j in range(len(datas)):
+        flower = list(datas.iloc[j, :-1])
+        res[j] = [(flower[0]) ** k for k in range(p)]
+        for i in range(1,len(cnames) - 1):
+            # print(j,i, res[j])
+            res[j] = np.outer(res[j],[(flower[i])  ** k for k in range(p)])
+    res = np.reshape(np.asarray(res), (100, 256))
+    print(res.shape)
+    # print(res)
     X = np.reshape(X, (100,16))
     # print(f'2 = {X[0]}')
-    w = linalg.pinv(X).dot(y)
-    yhat = X.dot(w)
+    # print(linalg.pinv(X).dot(X))
+    w = linalg.pinv(res).dot(y)
+    yhat = res.dot(w)
     count = 0
     for i in range(len(yhat)):
 
         if yhat[i] * y[i] >= 0:
             count += 1
+            print(yhat[i] , y[i])
 
     accuracy = np.round((count / len(yhat)) * 100, 2)
     print(accuracy)
@@ -246,7 +265,7 @@ def t_test(dset, I, iter, R, plot=False):  # Predicting
     ntt = initrandomtt(train, I, 0, 5, R)
     accs = []
     # ntt = np.asarray(ttest(data))
-    naive(Xtrain,yc)
+    naive(yc, train)
 
     for j in range(iter):
         # while (int(accuracy) < int(acc)):
@@ -270,11 +289,6 @@ def t_test(dset, I, iter, R, plot=False):  # Predicting
     print(f'accuracy is: {accuracy}, it took {iter} iterations')
     stop = time.process_time()
     return (stop-start)
-
-
-
-def ppinv(M):
-    return np.linalg.inv(M.T * M) * M.T
 
 
 def datareader(location):
