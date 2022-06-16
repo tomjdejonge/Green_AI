@@ -15,6 +15,10 @@ from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
 from svm_orig import svm
 from als_orig import t_test
+from internal_image_tt import internal_image_tensor_train
+import matplotlib.pyplot as plt
+import anvil.mpl_util
+from naive import naive
 
 anvil.server.connect('DH4R5MH3DTKYNYBPF63XKZLV-UHSXWMNTP7IBV2RQ')
 
@@ -64,11 +68,60 @@ def image_tensor_train(img, epsilon=0.1):
 
 
 @anvil.server.callable
+def plot_ep_vs_entries(img, epsilon):
+    epsilons = list(np.arange(0.01, 0.501, 0.01))
+    accuracies = []
+    entries = []
+    single = epsilon / 100
+    # start = epsilon - (5 * single)
+    # for i in range(10):
+    #     epsilons.append(start)
+    #     start += single
+    for ep in epsilons:
+        print(f'calculating ep {ep}')
+        g, d, r, n, final, deconstruction_time, percentage, total_elements, accuracy_percentage = internal_image_tensor_train(
+            img, ep)
+        accuracies.append(accuracy_percentage)
+        entries.append(total_elements / 786432)
+    ind = epsilons.index(epsilon)
+    #
+    # axs[1].plot(epsilons, entries)
+    # axs[1].plot(epsilons[ind], accuracies[ind], 'r*')
+    # anvil.mpl_util.plot_image()
+    return epsilons, entries, accuracies, ind
+
+
+@anvil.server.callable
+def ep_vs_ent(epsilons, entries, ind):
+    fig, ax = plt.subplots()
+    ax.plot(epsilons, entries)
+    ax.plot(epsilons[ind], entries[ind], 'r*')
+    ax.set(xlabel='Accuracy Epsilon', ylabel='Entries',
+           title='Accuracy Epsilon vs Entries')
+    ax.grid()
+    fig.savefig("ent.png")
+    return anvil.mpl_util.plot_image()
+
+
+@anvil.server.callable
+def ep_vs_acc(epsilons, accuracy, ind):
+    fig, ax = plt.subplots()
+    ax.plot(epsilons, accuracy)
+    ax.plot(epsilons[ind], accuracy[ind], 'r*')
+    ax.set(xlabel='Accuracy Epsilon', ylabel='Relative Error',
+           title='Accuracy Epsilon vs Relative Error')
+    ax.grid()
+    fig.savefig("acc.png")
+    return anvil.mpl_util.plot_image()
+
+
+@anvil.server.callable
 def import_csv_data_2_calculate(file, miter, split, I=1):
     df = pd.read_csv(io.BytesIO(file.get_bytes()), header=0)
     naive_accuracy, naive_sd, naive_time = svm(df, miter, split)
     new_accuracy, new_time = t_test(df, I, miter, split)
-    return naive_accuracy, naive_sd, naive_time, new_accuracy, new_time
+    normal_accuracy, normal_time = naive(df, split)
+    return naive_accuracy, naive_sd, naive_time, new_accuracy, new_time, normal_accuracy, normal_time
 
 
 @anvil.server.callable

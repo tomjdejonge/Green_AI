@@ -2,6 +2,7 @@ from internal_image_tt import internal_image_tensor_train, internal_process_imag
 import matplotlib.pyplot as plt
 
 
+
 def recommend(epsilon, img):
     epsilons = []
     accuracies = []
@@ -19,8 +20,8 @@ def recommend(epsilon, img):
     return epsilons, accuracies, entries
 
 
-dog = internal_process_image("C:/Users/tommo/Downloads/dog.jpg")
-epsilons, accuracies, total_elements = recommend(0.05, dog)
-
-plt.plot(total_elements, accuracies)
-plt.show()
+# dog = internal_process_image("C:/Users/tommo/Downloads/dog.jpg")
+# epsilons, accuracies, total_elements = recommend(0.05, dog)
+#
+# plt.plot(total_elements, accuracies)
+# plt.show()

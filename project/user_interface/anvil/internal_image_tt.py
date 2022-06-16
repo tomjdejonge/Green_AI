@@ -37,7 +37,7 @@ def internal_image_tensor_train(img, epsilon=0.1):
     new_image = border(np.array(reconstructed), 0, 255, p=True)
     error = np.sum(np.absolute(np.subtract(img, new_image)))
     total = np.sum(new_image)
-    accuracy_percentage = float(np.round((1 - (error / total)) * 100, 3))
+    accuracy_percentage = 1 - float(np.round((1 - (error / total)), 3))
     final_image = Image.fromarray(new_image.astype(np.uint8), 'RGB')
     bs = io.BytesIO()
     name = 'final_image'
