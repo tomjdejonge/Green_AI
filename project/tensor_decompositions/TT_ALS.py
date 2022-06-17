@@ -219,26 +219,25 @@ def predict(tt, X, R, d=0):
 
     return Gright.transpose()
 
-def naive(y, datas):
-    print(datas)
-    cnames = datas.columns.values
-    p = 4
+def naive(file, split, p):
+    start = time.process_time()
+    train, test = train_test_split(file, test_size=split)
+    cnames = train.columns.values
 
+    y = yclassifier(train, p)
     # print(minv, maxv)
 
-    res = [[0 for _ in range(p)] for _ in range(len(datas))]
-    for j in range(len(datas)):
-        flower = list(datas.iloc[j, :-1])
+    res = [[0 for _ in range(p)] for _ in range(len(train))]
+    for j in range(len(train)):
+        flower = list(train.iloc[j, :-1])
         res[j] = [(flower[0]) ** k for k in range(p)]
         for i in range(1,len(cnames) - 1):
-            # print(j,i, res[j])
-            res[j] = np.outer(res[j],[(flower[i])  ** k for k in range(p)])
-    res = np.reshape(np.asarray(res), (100, 256))
+            print(j,i, res[j])
+            res[j] = np.outer(res[j],[(flower[i]) ** k for k in range(p)])
+
+    res = np.reshape(np.asarray(res), (len(train), (p)**(len(cnames)-1)))
     print(res.shape)
-    # print(res)
-    X = np.reshape(X, (100,16))
-    # print(f'2 = {X[0]}')
-    # print(linalg.pinv(X).dot(X))
+
     w = linalg.pinv(res).dot(y)
     yhat = res.dot(w)
     count = 0
@@ -246,11 +245,12 @@ def naive(y, datas):
 
         if yhat[i] * y[i] >= 0:
             count += 1
-            print(yhat[i] , y[i])
+            # print(yhat[i], y[i])
 
     accuracy = np.round((count / len(yhat)) * 100, 2)
-    print(accuracy)
-    print(w.shape)
+    stop = time.process_time()
+
+    print(f'time = {stop-start}, accuracy = {accuracy}')
 
 # function to test
 def t_test(dset, I, iter, R, plot=False):  # Predicting
@@ -265,7 +265,8 @@ def t_test(dset, I, iter, R, plot=False):  # Predicting
     ntt = initrandomtt(train, I, 0, 5, R)
     accs = []
     # ntt = np.asarray(ttest(data))
-    naive(yc, train)
+    naive(dset, 0.33, I)
+
 
     for j in range(iter):
         # while (int(accuracy) < int(acc)):
@@ -328,11 +329,11 @@ if __name__ == "__main__":
     wine = "/Users/Tex/PycharmProjects/Green_AI/project/tensor_decompositions/winequality-white.csv"
 
     # variables
-    I = 4  # nauwkeurigheid
+    I = 3  # nauwkeurigheid
     R = 5  # Rank
     feature = 0
     iter = 5
-    dataset = iris  # iris #indiaan #wine
+    dataset = wine  # iris #indiaan #wine
 
     data = datareader(dataset)
     # iterations, times = recommend(data)
