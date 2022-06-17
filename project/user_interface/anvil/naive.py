@@ -20,9 +20,9 @@ def naive(file, split):
         for i in range(1,len(cnames) - 1):
             # print(j,i, res[j])
             res[j] = np.outer(res[j],[(flower[i]) ** k for k in range(p)])
-    print(f'shape: {np.asarray(res).shape}')
-    res = np.reshape(np.asarray(res), (len(train), (len(cnames)-1)**p))
-    print(res.shape)
+
+    res = np.reshape(np.asarray(res), (len(train), (p)**(len(cnames)-1)))
+    # print(res.shape)
 
     w = linalg.pinv(res).dot(y)
     yhat = res.dot(w)
@@ -35,6 +35,6 @@ def naive(file, split):
 
     accuracy = np.round((count / len(yhat)) * 100, 2)
     stop = time.process_time()
-    runtime = stop-start
-    print(f'time = {runtime}, accuracy = {accuracy}')
+    runtime = np.round(stop-start, 3)
+    print(f'time = {stop-start}, accuracy = {accuracy}')
     return accuracy, runtime

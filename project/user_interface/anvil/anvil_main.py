@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
 from svm_orig import svm
-from als_orig import t_test
+from als_orig import t_test, datareader
 from internal_image_tt import internal_image_tensor_train
 import matplotlib.pyplot as plt
 import anvil.mpl_util
@@ -118,9 +118,10 @@ def ep_vs_acc(epsilons, accuracy, ind):
 @anvil.server.callable
 def import_csv_data_2_calculate(file, miter, split, I=1):
     df = pd.read_csv(io.BytesIO(file.get_bytes()), header=0)
+    df_2 = datareader(file)
     naive_accuracy, naive_sd, naive_time = svm(df, miter, split)
     new_accuracy, new_time = t_test(df, I, miter, split)
-    normal_accuracy, normal_time = naive(df, split)
+    normal_accuracy, normal_time = naive(df_2, split)
     return naive_accuracy, naive_sd, naive_time, new_accuracy, new_time, normal_accuracy, normal_time
 
 

@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 import time as time
 from matplotlib import pyplot as plt
 from time import process_time
+import io
 
 
 def initrandomtt(dataset,J, min, max,r=2):
@@ -209,13 +210,13 @@ def ppinv(M):
     return np.linalg.inv(M.T*M) * M.T
 
 def datareader(location):
-    df_comma = pd.read_csv(location, nrows=1, sep=",")
-    df_semi = pd.read_csv(location, nrows=1, sep=";")
+    df_comma = pd.read_csv(io.BytesIO(location.get_bytes()), nrows=1, sep=",")
+    df_semi = pd.read_csv(io.BytesIO(location.get_bytes()), nrows=1, sep=";")
     if df_comma.shape[1] > df_semi.shape[1]:
         sepp = ','
     else:
         sepp = ';'
-    dframe = pd.read_csv(location, sep=sepp)
+    dframe = pd.read_csv(io.BytesIO(location.get_bytes()), sep=sepp)
 
     if len(dframe.iloc[:,0]) == dframe.iloc[-1,0] or len(dframe.iloc[:,0]) == dframe.iloc[-1,0] - 1:
         dframe.drop(columns=dframe.columns[0],
